@@ -1,0 +1,6 @@
+{
+  "name": "The Insect Guide",
+  "description": "AI-powered SaaS & PWA insect identification, danger assessment, pest control, observation journal, first aid guide, and seasonal alerts.",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #1a1a2e;
+    color: #f1f5f9;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-display {
+    font-family: 'Sora', system-ui, sans-serif;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #161626;
+}
+::-webkit-scrollbar-thumb {
+  background: #2b2b46;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3d3d63;
+}
+
+/* Leaflet dark theme adjustments */
+.leaflet-container {
+  background: #161626 !important;
+  border-radius: 0.75rem;
+}
+.leaflet-popup-content-wrapper {
+  background: #242442 !important;
+  color: #f1f5f9 !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+}
+.leaflet-popup-tip {
+  background: #242442 !important;
+}
