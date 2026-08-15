@@ -57,6 +57,23 @@ export async function requireAuth(req: AuthRequest, res: Response, next: NextFun
   }
 }
 
+export async function requirePro(req: AuthRequest, res: Response, next: NextFunction) {
+  return requireAuth(req, res, () => {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ error: 'Authentication required. Please log in.' });
+    }
+    if (user.tier !== 'pro' && user.role !== 'admin') {
+      return res.status(403).json({
+        error: 'Pro subscription required.',
+        code: 'PRO_REQUIRED',
+        message: 'This capability requires an active Pro subscription. Please select a plan to continue.',
+      });
+    }
+    next();
+  });
+}
+
 export async function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const authHeader = req.headers.authorization;
@@ -77,6 +94,57 @@ export async function requireAdmin(req: AuthRequest, res: Response, next: NextFu
   } catch (err) {
     return res.status(403).json({ error: 'Unauthorized admin access.' });
   }
+}
+
+// ----------------------------------------------------
+// BRUTE-FORCE RATE LIMITING FOR LOGIN ENDPOINTS
+// ----------------------------------------------------
+interface LoginAttemptRecord {
+  count: number;
+  lockedUntil?: number;
+  lastAttempt: number;
+}
+
+const loginAttempts = new Map<string, LoginAttemptRecord>();
+
+export function checkLoginAttempts(identifier: string): { allowed: boolean; waitMinutes?: number } {
+  const cleanId = (identifier || '').toLowerCase().trim();
+  const record = loginAttempts.get(cleanId);
+  if (!record) return { allowed: true };
+
+  const now = Date.now();
+  if (record.lockedUntil && now < record.lockedUntil) {
+    const waitMinutes = Math.ceil((record.lockedUntil - now) / (60 * 1000));
+    return { allowed: false, waitMinutes };
+  }
+
+  // Reset attempt count if cool-off period has passed (15 mins)
+  if (now - record.lastAttempt > 15 * 60 * 1000) {
+    loginAttempts.delete(cleanId);
+    return { allowed: true };
+  }
+
+  return { allowed: true };
+}
+
+export function recordFailedLoginAttempt(identifier: string) {
+  const cleanId = (identifier || '').toLowerCase().trim();
+  const now = Date.now();
+  const record = loginAttempts.get(cleanId) || { count: 0, lastAttempt: now };
+  record.count += 1;
+  record.lastAttempt = now;
+
+  // After 5 failed attempts, trigger a 15-minute temporary lockout
+  if (record.count >= 5) {
+    record.lockedUntil = now + 15 * 60 * 1000;
+  }
+
+  loginAttempts.set(cleanId, record);
+}
+
+export function recordSuccessfulLogin(identifier: string) {
+  const cleanId = (identifier || '').toLowerCase().trim();
+  loginAttempts.delete(cleanId);
 }
 
 export async function optionalAuth(req: AuthRequest, res: Response, next: NextFunction) {

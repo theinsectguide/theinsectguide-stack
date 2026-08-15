@@ -26,7 +26,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
     setLoading(false);
 
     if (res.success) {
-      onNavigate('scan');
+      if (res.user?.role === 'admin') {
+        onNavigate('admin-dashboard');
+      } else if (res.user?.tier === 'pro') {
+        // Active Pro subscriber: direct to full dashboard
+        onNavigate('scan');
+      } else {
+        // Free / Unpaid user: redirect to pricing page to select plan
+        onNavigate('pricing');
+      }
     } else {
       setErrorMsg(res.error || 'Invalid credentials.');
     }

@@ -2,6 +2,8 @@ import React, { useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { DangerBadge } from '../components/DangerBadge';
 import { ShareCardModal } from '../components/ShareCardModal';
+import { ScanPreview } from '../components/previews/ScanPreview';
+import { InstallAppModal } from '../components/InstallAppModal';
 import { ScanResult, Scan } from '../types';
 import {
   Camera,
@@ -19,6 +21,7 @@ import {
   RefreshCw,
   HelpCircle,
   Skull,
+  Smartphone,
 } from 'lucide-react';
 
 interface ScanPageProps {
@@ -26,12 +29,13 @@ interface ScanPageProps {
 }
 
 export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate }) => {
-  const { user, token, isPro, refreshUser } = useAuth();
+  const { user, token, isPro, isAuthenticated, refreshUser } = useAuth();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [currentScan, setCurrentScan] = useState<Scan | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showInstallModal, setShowInstallModal] = useState(false);
   const [savedToJournal, setSavedToJournal] = useState(false);
   const [journalNotes, setJournalNotes] = useState('');
   const [journalStatus, setJournalStatus] = useState<'found' | 'observed' | 'reported' | 'photographed'>('found');
@@ -39,6 +43,10 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate }) => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  if (!isPro) {
+    return <ScanPreview onNavigate={onNavigate} isAuthenticated={isAuthenticated} />;
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -510,6 +518,12 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate }) => {
           onClose={() => setShowShareModal(false)}
         />
       )}
+
+      {/* Smartphone Install Modal */}
+      <InstallAppModal
+        isOpen={showInstallModal}
+        onClose={() => setShowInstallModal(false)}
+      />
     </div>
   );
 };

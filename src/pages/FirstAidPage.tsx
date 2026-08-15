@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { FirstAidPreview } from '../components/previews/FirstAidPreview';
 import {
   HeartPulse,
   AlertTriangle,
@@ -10,8 +11,8 @@ import {
   RotateCcw,
 } from 'lucide-react';
 
-export const FirstAidPage: React.FC = () => {
-  const { user } = useAuth();
+export const FirstAidPage: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate = () => {} }) => {
+  const { user, isPro, isAuthenticated } = useAuth();
   const currentRegion = user?.region || 'UK';
 
   // Triage state
@@ -22,6 +23,10 @@ export const FirstAidPage: React.FC = () => {
   const [criticalSymptoms, setCriticalSymptoms] = useState<string[]>([]);
   const [hasAllergy, setHasAllergy] = useState<boolean>(false);
   const [victimAge, setVictimAge] = useState<'infant' | 'child' | 'adult' | 'senior'>('adult');
+
+  if (!isPro) {
+    return <FirstAidPreview onNavigate={onNavigate} isAuthenticated={isAuthenticated} />;
+  }
 
   const emergencyContacts = {
     UK: { nonEmergency: '111 (NHS)', poison: '0344 892 0111' },

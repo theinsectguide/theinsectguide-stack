@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAlerts } from '../context/AlertContext';
 import { useAuth } from '../context/AuthContext';
+import { AlertsPreview } from '../components/previews/AlertsPreview';
 import {
   Bell,
   CloudSun,
@@ -15,11 +16,15 @@ import {
   Loader2,
 } from 'lucide-react';
 
-export const AlertsPage: React.FC = () => {
+export const AlertsPage: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate = () => {} }) => {
   const { alerts, weatherRisk, isLoading, markAsRead, requestPushNotifications, refreshAlerts } =
     useAlerts();
-  const { user } = useAuth();
+  const { user, isPro, isAuthenticated } = useAuth();
   const [pushStatus, setPushStatus] = useState<string | null>(null);
+
+  if (!isPro) {
+    return <AlertsPreview onNavigate={onNavigate} isAuthenticated={isAuthenticated} />;
+  }
 
   const handleEnablePush = async () => {
     const granted = await requestPushNotifications();

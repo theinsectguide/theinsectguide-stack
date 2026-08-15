@@ -32,9 +32,13 @@ import {
   hashPassword,
   comparePassword,
   requireAuth,
+  requirePro,
   requireAdmin,
   optionalAuth,
   seedAdminUser,
+  checkLoginAttempts,
+  recordFailedLoginAttempt,
+  recordSuccessfulLogin,
   AuthRequest,
 } from './server/auth';
 import { identifyInsectWithClaude, analyzePestWithClaude } from './server/anthropic';
@@ -143,19 +147,35 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email and password are required.' });
     }
 
-    const user = await findUserByEmail(email);
+    const cleanEmail = email.toLowerCase().trim();
+
+    // Check brute-force login attempts
+    const attemptCheck = checkLoginAttempts(cleanEmail);
+    if (!attemptCheck.allowed) {
+      return res.status(429).json({
+        error: `Too many failed login attempts. Account temporarily locked for ${attemptCheck.waitMinutes || 15} minutes for security.`,
+        code: 'ACCOUNT_LOCKED',
+      });
+    }
+
+    const user = await findUserByEmail(cleanEmail);
     if (!user || !user.password) {
+      recordFailedLoginAttempt(cleanEmail);
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
     const valid = await comparePassword(password, user.password);
     if (!valid) {
+      recordFailedLoginAttempt(cleanEmail);
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
     if (user.is_banned) {
       return res.status(403).json({ error: `Account suspended: ${user.banned_reason || 'Violation of terms of service'}. Contact support for assistance.` });
     }
+
+    // Clear failed attempts upon successful authentication
+    recordSuccessfulLogin(cleanEmail);
 
     const token = generateToken(user);
     return res.json({
@@ -190,15 +210,30 @@ app.post('/api/auth/admin-login', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Admin email and password required.' });
     }
 
-    const user = await findUserByEmail(email);
+    const cleanEmail = email.toLowerCase().trim();
+
+    // Check brute-force login attempts
+    const attemptCheck = checkLoginAttempts(`admin_${cleanEmail}`);
+    if (!attemptCheck.allowed) {
+      return res.status(429).json({
+        error: `Too many failed admin attempts. Endpoint locked for ${attemptCheck.waitMinutes || 15} minutes.`,
+        code: 'ADMIN_LOCKED',
+      });
+    }
+
+    const user = await findUserByEmail(cleanEmail);
     if (!user || user.role !== 'admin' || !user.password) {
+      recordFailedLoginAttempt(`admin_${cleanEmail}`);
       return res.status(403).json({ error: 'Invalid administrator credentials.' });
     }
 
     const valid = await comparePassword(password, user.password);
     if (!valid) {
+      recordFailedLoginAttempt(`admin_${cleanEmail}`);
       return res.status(403).json({ error: 'Invalid administrator credentials.' });
     }
+
+    recordSuccessfulLogin(`admin_${cleanEmail}`);
 
     const token = generateToken(user);
     return res.json({
@@ -249,7 +284,9 @@ app.put('/api/auth/update-profile', requireAuth, async (req: AuthRequest, res: R
     if (level && ['Beginner', 'Amateur', 'Expert', 'Master'].includes(level)) updates.level = level;
 
     const updated = await updateUser(user._id, updates);
-    return res.json({ user: updated });
+    if (!updated) return res.status(404).json({ error: 'User not found.' });
+    const { password: _, ...sanitized } = updated;
+    return res.json({ user: sanitized });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to update profile.' });
   }
@@ -258,7 +295,7 @@ app.put('/api/auth/update-profile', requireAuth, async (req: AuthRequest, res: R
 // ----------------------------------------------------
 // SCAN & CLAUDE VISION IDENTIFICATION ROUTES
 // ----------------------------------------------------
-app.post('/api/scans/identify', requireAuth, async (req: AuthRequest, res: Response) => {
+app.post('/api/scans/identify', requirePro, async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
     const { image, mimeType, location, notes } = req.body;
@@ -310,7 +347,7 @@ app.post('/api/scans/identify', requireAuth, async (req: AuthRequest, res: Respo
   }
 });
 
-app.post('/api/scans/analyze-pest', requireAuth, async (req: AuthRequest, res: Response) => {
+app.post('/api/scans/analyze-pest', requirePro, async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
     const { image, mimeType, location_found, damage_observed } = req.body;
@@ -345,7 +382,7 @@ app.post('/api/scans/analyze-pest', requireAuth, async (req: AuthRequest, res: R
   }
 });
 
-app.get('/api/scans', requireAuth, async (req: AuthRequest, res: Response) => {
+app.get('/api/scans', requirePro, async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
     const scans = await getScansByUserId(user._id);
@@ -355,7 +392,7 @@ app.get('/api/scans', requireAuth, async (req: AuthRequest, res: Response) => {
   }
 });
 
-app.get('/api/scans/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+app.get('/api/scans/:id', requirePro, async (req: AuthRequest, res: Response) => {
   try {
     const scan = await getScanById(req.params.id);
     if (!scan) return res.status(404).json({ error: 'Scan not found.' });
@@ -369,7 +406,7 @@ app.get('/api/scans/:id', requireAuth, async (req: AuthRequest, res: Response) =
   }
 });
 
-app.post('/api/scans/:id/save-to-journal', requireAuth, async (req: AuthRequest, res: Response) => {
+app.post('/api/scans/:id/save-to-journal', requirePro, async (req: AuthRequest, res: Response) => {
   try {
     const scan = await getScanById(req.params.id);
     if (!scan) return res.status(404).json({ error: 'Scan not found.' });
@@ -400,7 +437,7 @@ app.post('/api/scans/:id/save-to-journal', requireAuth, async (req: AuthRequest,
 // ----------------------------------------------------
 // OBSERVATION JOURNAL ROUTES
 // ----------------------------------------------------
-app.get('/api/journal', requireAuth, async (req: AuthRequest, res: Response) => {
+app.get('/api/journal', requirePro, async (req: AuthRequest, res: Response) => {
   try {
     const entries = await getJournalEntriesByUserId(req.user!._id);
     return res.json({ entries });
@@ -409,7 +446,7 @@ app.get('/api/journal', requireAuth, async (req: AuthRequest, res: Response) => 
   }
 });
 
-app.post('/api/journal', requireAuth, async (req: AuthRequest, res: Response) => {
+app.post('/api/journal', requirePro, async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
     const { photo_url, insect_name, latin_name, danger_level, status_type, location, notes, status } = req.body;
@@ -437,7 +474,7 @@ app.post('/api/journal', requireAuth, async (req: AuthRequest, res: Response) =>
   }
 });
 
-app.put('/api/journal/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+app.put('/api/journal/:id', requirePro, async (req: AuthRequest, res: Response) => {
   try {
     const entries = await getJournalEntriesByUserId(req.user!._id);
     const exists = entries.find(e => e._id === req.params.id);
@@ -450,7 +487,7 @@ app.put('/api/journal/:id', requireAuth, async (req: AuthRequest, res: Response)
   }
 });
 
-app.delete('/api/journal/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+app.delete('/api/journal/:id', requirePro, async (req: AuthRequest, res: Response) => {
   try {
     const entries = await getJournalEntriesByUserId(req.user!._id);
     const exists = entries.find(e => e._id === req.params.id);

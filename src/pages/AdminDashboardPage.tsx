@@ -33,7 +33,7 @@ export const AdminDashboardPage: React.FC<{ onNavigate: (tab: string) => void }>
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const loadAdminData = async () => {
-    if (!token) return;
+    if (!token || !isAdmin) return;
     setLoading(true);
     try {
       const [statsRes, usersRes] = await Promise.all([
@@ -58,8 +58,32 @@ export const AdminDashboardPage: React.FC<{ onNavigate: (tab: string) => void }>
   };
 
   useEffect(() => {
+    if (!isAdmin) {
+      onNavigate('admin-login');
+      return;
+    }
     loadAdminData();
-  }, [token]);
+  }, [token, isAdmin]);
+
+  if (!isAdmin) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-20 text-center space-y-4">
+        <div className="w-14 h-14 rounded-2xl bg-rose-500/20 border border-rose-500/30 mx-auto flex items-center justify-center text-rose-400">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-white">Administrator Access Required</h2>
+        <p className="text-xs text-slate-400">
+          You do not have administrative privileges to view this area.
+        </p>
+        <button
+          onClick={() => onNavigate('landing')}
+          className="px-4 py-2.5 rounded-xl bg-[#2e86ff] hover:bg-blue-600 text-white text-xs font-bold transition-all shadow-lg"
+        >
+          Return to Application
+        </button>
+      </div>
+    );
+  }
 
   const handleBanUser = async (user: User) => {
     const reason = prompt(`Please enter a ban reason for ${user.email}:`, 'Violation of platform terms');

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { LeafletMap } from '../components/LeafletMap';
 import { DangerBadge } from '../components/DangerBadge';
+import { JournalPreview } from '../components/previews/JournalPreview';
 import { JournalEntry } from '../types';
 import {
   BookMarked,
@@ -19,13 +20,17 @@ import {
 } from 'lucide-react';
 
 export const JournalPage: React.FC<{ onNavigate: (tab: string) => void }> = ({ onNavigate }) => {
-  const { user, token, isPro } = useAuth();
+  const { user, token, isPro, isAuthenticated } = useAuth();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [exportingPdf, setExportingPdf] = useState(false);
+
+  if (!isPro) {
+    return <JournalPreview onNavigate={onNavigate} isAuthenticated={isAuthenticated} />;
+  }
 
   const fetchJournal = async () => {
     if (!token) {

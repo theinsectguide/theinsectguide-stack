@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { DangerBadge } from '../components/DangerBadge';
+import { EncyclopediaPreview } from '../components/previews/EncyclopediaPreview';
 import { Species } from '../types';
 import {
   BookOpen,
@@ -18,6 +20,7 @@ import {
 } from 'lucide-react';
 
 export const EncyclopediaPage: React.FC<{ onNavigate: (tab: string) => void }> = ({ onNavigate }) => {
+  const { isPro, isAuthenticated } = useAuth();
   const [speciesList, setSpeciesList] = useState<Species[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -27,6 +30,10 @@ export const EncyclopediaPage: React.FC<{ onNavigate: (tab: string) => void }> =
   const [activeSpecies, setActiveSpecies] = useState<Species | null>(null);
   const [showTopTenModal, setShowTopTenModal] = useState<string | null>(null);
   const [topTenList, setTopTenList] = useState<any[]>([]);
+
+  if (!isPro) {
+    return <EncyclopediaPreview onNavigate={onNavigate} isAuthenticated={isAuthenticated} />;
+  }
 
   useEffect(() => {
     fetch('/api/encyclopedia')

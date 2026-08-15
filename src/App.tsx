@@ -18,6 +18,7 @@ import { PestGuidePage } from './pages/PestGuidePage';
 import { JournalPage } from './pages/JournalPage';
 import { EncyclopediaPage } from './pages/EncyclopediaPage';
 import { AlertsPage } from './pages/AlertsPage';
+import { WeatherPage } from './pages/WeatherPage';
 import { PricingPage } from './pages/PricingPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { LoginPage } from './pages/LoginPage';
@@ -25,25 +26,28 @@ import { AdminLoginPage } from './pages/AdminLoginPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
 import { SettingsPage } from './pages/SettingsPage';
 
+const PRO_PROTECTED_TABS = ['scan', 'journal', 'pest', 'encyclopedia', 'first-aid', 'alerts', 'weather'];
+
 function AppContent() {
   const { isAuthenticated, isPro, isAdmin, isLoading } = useAuth();
   const [currentTab, setCurrentTab] = useState<string>('landing');
 
   const checkAccessAndResolveTab = (tab: string): string => {
-    let resolvedTab = tab;
-    if (resolvedTab === 'weather') resolvedTab = 'alerts';
+    // Sanitize input: strip query parameters or bypass arguments (e.g. "?pro=true", "?bypass=1")
+    let cleanTab = (tab || 'landing').split('?')[0].split('&')[0].trim().toLowerCase();
 
-    // STRICT ADMIN ISOLATION: Admin role must ONLY have access to the admin dashboard & admin login
-    if (isAdmin) {
-      if (resolvedTab !== 'admin-dashboard' && resolvedTab !== 'admin-login') {
-        return 'admin-dashboard';
-      }
-      return resolvedTab;
+    // Strict Security Guard: Only users with role === 'admin' can access admin-dashboard
+    if (cleanTab === 'admin-dashboard' && !isAdmin) {
+      return 'admin-login';
     }
 
-    const protectedTabs = ['scan', 'journal', 'pest', 'encyclopedia', 'first-aid', 'alerts'];
-    
-    if (protectedTabs.includes(resolvedTab)) {
+    // Protected settings page requires authentication
+    if (cleanTab === 'settings' && !isAuthenticated) {
+      return 'login';
+    }
+
+    // Pro-only tool tabs protection
+    if (PRO_PROTECTED_TABS.includes(cleanTab)) {
       if (!isAuthenticated) {
         return 'login';
       }
@@ -52,15 +56,7 @@ function AppContent() {
       }
     }
 
-    if (resolvedTab === 'settings' && !isAuthenticated) {
-      return 'login';
-    }
-
-    if (resolvedTab === 'admin-dashboard' && !isAdmin) {
-      return 'admin-login';
-    }
-
-    return resolvedTab;
+    return cleanTab;
   };
 
   // Handle URL hash routing or initial state
@@ -116,11 +112,12 @@ function AppContent() {
       <main className="flex-1">
         {currentTab === 'landing' && <LandingPage onNavigate={handleNavigate} />}
         {currentTab === 'scan' && <ScanPage onNavigate={handleNavigate} />}
-        {currentTab === 'first-aid' && <FirstAidPage />}
+        {currentTab === 'first-aid' && <FirstAidPage onNavigate={handleNavigate} />}
         {currentTab === 'pest' && <PestGuidePage onNavigate={handleNavigate} />}
         {currentTab === 'journal' && <JournalPage onNavigate={handleNavigate} />}
         {currentTab === 'encyclopedia' && <EncyclopediaPage onNavigate={handleNavigate} />}
-        {currentTab === 'alerts' && <AlertsPage />}
+        {currentTab === 'alerts' && <AlertsPage onNavigate={handleNavigate} />}
+        {currentTab === 'weather' && <WeatherPage onNavigate={handleNavigate} />}
         {currentTab === 'pricing' && <PricingPage onNavigate={handleNavigate} />}
         {currentTab === 'register' && <RegisterPage onNavigate={handleNavigate} />}
         {currentTab === 'login' && <LoginPage onNavigate={handleNavigate} />}

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { PestPreview } from '../components/previews/PestPreview';
 import {
   ShieldAlert,
   Bug,
@@ -30,9 +32,14 @@ interface PestItem {
 }
 
 export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void }> = ({ onNavigate }) => {
+  const { isPro, isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [activeModalPest, setActiveModalPest] = useState<PestItem | null>(null);
+
+  if (!isPro) {
+    return <PestPreview onNavigate={onNavigate} isAuthenticated={isAuthenticated} />;
+  }
 
   const pests: PestItem[] = [
     {

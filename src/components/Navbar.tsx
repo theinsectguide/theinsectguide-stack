@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useAlerts } from '../context/AlertContext';
+import { InstallAppModal } from './InstallAppModal';
 import {
   Bug,
   Camera,
@@ -15,6 +16,7 @@ import {
   X,
   Crown,
   Sparkles,
+  Smartphone,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -26,6 +28,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
   const { isAuthenticated, isPro, isAdmin, logout } = useAuth();
   const { unreadCount } = useAlerts();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showInstallModal, setShowInstallModal] = useState(false);
 
   const handleNav = (tab: string) => {
     onSelectTab(tab);
@@ -295,10 +298,26 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
                 <Sparkles className="w-4 h-4 text-amber-400" />
                 Pro Pricing & 48h Guarantee
               </button>
+              <button
+                onClick={() => {
+                  setShowInstallModal(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 hover:bg-emerald-900/50 transition-colors"
+              >
+                <Smartphone className="w-4 h-4 text-emerald-400" />
+                Install on Smartphone
+              </button>
             </>
           )}
         </div>
       )}
+
+      {/* PWA / Smartphone Install Modal */}
+      <InstallAppModal
+        isOpen={showInstallModal}
+        onClose={() => setShowInstallModal(false)}
+      />
     </header>
   );
 };

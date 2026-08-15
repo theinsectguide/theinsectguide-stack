@@ -38,6 +38,17 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
         </p>
       </div>
 
+      {user && !isPro && (
+        <div className="max-w-2xl mx-auto p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-1">
+          <p className="text-xs sm:text-sm font-semibold text-emerald-300">
+            Welcome, {user.name || 'Explorer'}!
+          </p>
+          <p className="text-xs text-slate-300">
+            Please select a Pro plan below to activate your unlimited AI scans, emergency triage protocols, and observation tools.
+          </p>
+        </div>
+      )}
+
       {/* 2 Paid Plans Grid: Monthly ($4.99/mo) and Annual ($29.99/yr) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-stretch max-w-4xl mx-auto">
         {/* Monthly Plan Card - NO BADGE */}
@@ -153,14 +164,16 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* Money back guarantee highlight */}
-      <div className="p-4 sm:p-6 rounded-2xl bg-[#17172c] border border-slate-700 text-center space-y-2 max-w-2xl mx-auto shadow-lg">
-        <div className="flex items-center justify-center gap-2 text-amber-400 font-display font-bold text-xs sm:text-sm">
-          <Clock className="w-4 h-4 shrink-0" />
-          <span>48-Hour Money-Back Guarantee</span>
+      {/* 48-HOUR MONEY-BACK GUARANTEE BOX UNDER THE PLANS */}
+      <div className="max-w-2xl mx-auto space-y-2">
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-950/70 via-[#132c25] to-emerald-950/70 border-2 border-emerald-500/80 shadow-xl flex items-center justify-center gap-3 text-center">
+          <ShieldCheck className="w-6 h-6 text-[#10b981] shrink-0" />
+          <span className="font-display font-extrabold text-sm sm:text-base text-white">
+            48-hour money-back guarantee* — Full refund, no questions asked. No risk.
+          </span>
         </div>
-        <p className="text-xs text-slate-300 leading-relaxed">
-          48-hour money-back guarantee on your first payment — no questions asked. If you aren't completely satisfied, you can request an instant 1-click refund directly from your Dashboard Settings within 48 hours.
+        <p className="text-[11px] sm:text-xs text-slate-400 text-center px-4 leading-relaxed">
+          *Applies to first payment only, within 48 hours of subscription. Subsequent payments are non-refundable.
         </p>
       </div>
     </div>

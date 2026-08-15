@@ -8,15 +8,15 @@ interface AuthContextType {
   isAdmin: boolean;
   isPro: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  adminLogin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; user?: User; error?: string }>;
+  adminLogin: (email: string, password: string) => Promise<{ success: boolean; user?: User; error?: string }>;
   register: (data: {
     name: string;
     email: string;
     password: string;
     region: string;
     level: string;
-  }) => Promise<{ success: boolean; error?: string }>;
+  }) => Promise<{ success: boolean; user?: User; error?: string }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<boolean>;
@@ -81,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('insect_guide_token', data.token);
       setToken(data.token);
       setUser(data.user);
-      return { success: true };
+      return { success: true, user: data.user };
     } catch (err: any) {
       return { success: false, error: err.message || 'Network connection failed' };
     }
@@ -101,7 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('insect_guide_token', data.token);
       setToken(data.token);
       setUser(data.user);
-      return { success: true };
+      return { success: true, user: data.user };
     } catch (err: any) {
       return { success: false, error: err.message || 'Network error' };
     }
@@ -115,6 +115,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     level: string;
   }) => {
     try {
+      // Clear any lingering session first
+      localStorage.removeItem('insect_guide_token');
+      setToken(null);
+      setUser(null);
+
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -127,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('insect_guide_token', data.token);
       setToken(data.token);
       setUser(data.user);
-      return { success: true };
+      return { success: true, user: data.user };
     } catch (err: any) {
       return { success: false, error: err.message || 'Network connection failed' };
     }

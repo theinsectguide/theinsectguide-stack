@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { InstallAppModal } from '../components/InstallAppModal';
 import {
   Camera,
   ShieldAlert,
@@ -14,6 +15,7 @@ import {
   Zap,
   Sparkles,
   AlertTriangle,
+  Smartphone,
 } from 'lucide-react';
 import { DangerBadge } from '../components/DangerBadge';
 
@@ -24,6 +26,7 @@ interface LandingPageProps {
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
   const [activeDemo, setActiveDemo] = useState<'hornet' | 'ladybug' | 'wasp' | 'bee'>('hornet');
   const [imgFallbacks, setImgFallbacks] = useState<Record<string, boolean>>({});
+  const [showInstallModal, setShowInstallModal] = useState(false);
 
   const demoData = {
     hornet: {
@@ -181,22 +184,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
               </p>
 
               {/* CTA Buttons & Guarantee */}
-              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
                 <button
                   onClick={() => onNavigate('pricing')}
-                  className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-[#e94560] to-[#f5a623] hover:from-rose-600 hover:to-amber-500 text-white font-display font-bold text-base shadow-xl shadow-rose-950/50 hover:shadow-rose-900/60 active:scale-98 transition-all flex items-center justify-center gap-2.5"
+                  className="w-full sm:w-auto px-7 py-3.5 rounded-2xl bg-gradient-to-r from-[#e94560] to-[#f5a623] hover:from-rose-600 hover:to-amber-500 text-white font-display font-bold text-sm sm:text-base shadow-xl shadow-rose-950/50 active:scale-98 transition-all flex items-center justify-center gap-2"
                 >
-                  <Sparkles className="w-5 h-5" />
+                  <Sparkles className="w-4 h-4" />
                   Start identifying — $4.99/mo
                   <ArrowRight className="w-4 h-4" />
                 </button>
 
                 <button
                   onClick={() => onNavigate('scan')}
-                  className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-[#242446] hover:bg-[#2e2e58] border border-[#3b3b6e] text-slate-100 font-semibold text-sm transition-all flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-[#242446] hover:bg-[#2e2e58] border border-[#3b3b6e] text-slate-100 font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2"
                 >
                   <Camera className="w-4 h-4 text-[#10b981]" />
                   Try Live Scanner
+                </button>
+
+                <button
+                  onClick={() => setShowInstallModal(true)}
+                  className="w-full sm:w-auto px-4 py-3.5 rounded-2xl bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/40 text-emerald-300 font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2"
+                >
+                  <Smartphone className="w-4 h-4 text-emerald-400" />
+                  Install App
                 </button>
               </div>
 
@@ -229,48 +240,59 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
                   </div>
                 </div>
 
-                {/* Scan Image Container */}
-                <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-[#0c0c18] border border-slate-700/80 shadow-2xl group">
-                  {/* High Resolution Macro Insect Photograph */}
-                  <img
-                    key={currentMock.id + (imgFallbacks[currentMock.id] ? '-fallback' : '')}
-                    src={imgFallbacks[currentMock.id] ? currentMock.fallbackImage : currentMock.image}
-                    alt={currentMock.name}
-                    onError={() => {
-                      if (!imgFallbacks[currentMock.id]) {
-                        setImgFallbacks(prev => ({ ...prev, [currentMock.id]: true }));
-                      }
-                    }}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    referrerPolicy="no-referrer"
-                    loading="eager"
-                  />
+                {/* Scan Viewfinder Container: Pure Black Screen with Pulsing Green Target */}
+                <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-[#070711] border border-slate-700/80 shadow-2xl flex items-center justify-center">
+                  {/* High-tech Radar Grid & Concentric Rings */}
+                  <div className="absolute inset-0 bg-[radial-gradient(#10b98115_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none opacity-60" />
+                  
+                  {/* Subtle Concentric Radar Range Circles */}
+                  <div className="absolute w-48 h-48 rounded-full border border-emerald-500/10 pointer-events-none" />
+                  <div className="absolute w-32 h-32 rounded-full border border-emerald-500/20 pointer-events-none" />
+                  <div className="absolute w-20 h-20 rounded-full border border-emerald-500/30 pointer-events-none" />
 
-                  {/* Subtle gradient vignette for contrast and legibility */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
+                  {/* Horizontal & Vertical Crosshairs */}
+                  <div className="absolute inset-x-0 top-1/2 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/25 to-transparent pointer-events-none" />
+                  <div className="absolute inset-y-0 left-1/2 w-[1px] bg-gradient-to-b from-transparent via-emerald-500/25 to-transparent pointer-events-none" />
 
-                  {/* Danger Badge on top right */}
+                  {/* Laser Scanning Bar Animation */}
+                  <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-emerald-400/80 to-transparent shadow-[0_0_8px_#10b981] animate-pulse pointer-events-none top-1/3" />
+
+                  {/* Pulsing Green Center Circle & Target */}
+                  <div className="relative flex items-center justify-center z-10">
+                    {/* Outer Expanding Pulse Ring */}
+                    <div className="w-16 h-16 rounded-full bg-emerald-500/20 animate-ping absolute" />
+                    {/* Mid Glowing Ring */}
+                    <div className="w-12 h-12 rounded-full bg-emerald-500/15 border border-emerald-400/60 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.4)] animate-pulse">
+                      {/* Center Solid Glowing Green Dot */}
+                      <div className="w-3.5 h-3.5 rounded-full bg-emerald-400 shadow-[0_0_12px_#10b981]" />
+                    </div>
+                  </div>
+
+                  {/* Top Left Match Confidence Tag */}
+                  <div className="absolute top-2.5 left-2.5 z-10 px-2.5 py-1 rounded-full bg-black/85 backdrop-blur-md border border-emerald-500/30 text-[10px] font-bold text-emerald-400 flex items-center gap-1.5 shadow-lg">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                    <span>{currentMock.tag}</span>
+                  </div>
+
+                  {/* Top Right Danger Badge */}
                   <div className="absolute top-2.5 right-2.5 z-10">
                     <DangerBadge status={currentMock.status} dangerLevel={currentMock.level} size="sm" />
                   </div>
 
-                  {/* Match Confidence Tag on top left */}
-                  <div className="absolute top-2.5 left-2.5 z-10 px-2 py-0.5 rounded-full bg-black/80 backdrop-blur-md border border-white/20 text-[10px] font-bold text-emerald-400 flex items-center gap-1.5 shadow-lg">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>{currentMock.tag}</span>
+                  {/* Bottom Center Status Ribbon */}
+                  <div className="absolute bottom-2.5 inset-x-4 z-10 flex items-center justify-between px-3 py-1 rounded-lg bg-black/85 backdrop-blur-md border border-slate-700/60 text-[10px]">
+                    <span className="font-semibold text-slate-200">{currentMock.name}</span>
+                    <span className="font-mono text-emerald-400 font-bold tracking-wider uppercase text-[9px]">
+                      Optical Lock Active
+                    </span>
                   </div>
 
-                  {/* Bottom Specimen Classification Ribbon */}
-                  <div className="absolute bottom-2.5 left-2.5 z-10 px-2.5 py-0.5 rounded-md bg-black/75 backdrop-blur-md border border-slate-700/60 text-[10px] font-medium text-slate-200">
-                    {currentMock.typeBadge}
-                  </div>
-
-                  {/* Clean Optical Viewfinder Corners */}
+                  {/* Clean Optical Viewfinder Green Corners */}
                   <div className="absolute inset-3 pointer-events-none">
-                    <div className="absolute top-0 left-0 w-3.5 h-3.5 border-t-2 border-l-2 border-emerald-400/90 rounded-tl" />
-                    <div className="absolute top-0 right-0 w-3.5 h-3.5 border-t-2 border-r-2 border-emerald-400/90 rounded-tr" />
-                    <div className="absolute bottom-0 left-0 w-3.5 h-3.5 border-b-2 border-l-2 border-emerald-400/90 rounded-bl" />
-                    <div className="absolute bottom-0 right-0 w-3.5 h-3.5 border-b-2 border-r-2 border-emerald-400/90 rounded-br" />
+                    <div className="absolute top-0 left-0 w-3.5 h-3.5 border-t-2 border-l-2 border-emerald-400 rounded-tl" />
+                    <div className="absolute top-0 right-0 w-3.5 h-3.5 border-t-2 border-r-2 border-emerald-400 rounded-tr" />
+                    <div className="absolute bottom-0 left-0 w-3.5 h-3.5 border-b-2 border-l-2 border-emerald-400 rounded-bl" />
+                    <div className="absolute bottom-0 right-0 w-3.5 h-3.5 border-b-2 border-r-2 border-emerald-400 rounded-br" />
                   </div>
                 </div>
 
@@ -384,6 +406,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
         </div>
       </section>
 
+      {/* 48-HOUR MONEY-BACK GUARANTEE BANNER UNDER HERO */}
+      <section className="max-w-7xl mx-auto px-4 lg:px-8 -mt-4 sm:-mt-6">
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-950/90 via-[#122e26] to-emerald-950/90 border-2 border-emerald-500/60 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+              <ShieldCheck className="w-6 h-6 text-[#10b981]" />
+            </div>
+            <div>
+              <h3 className="font-display font-black text-sm sm:text-base text-white">
+                48-hour money-back guarantee* — not satisfied? Full refund, no questions asked.
+              </h3>
+              <p className="text-[11px] sm:text-xs text-emerald-300">
+                Test all scanner features, pest guides, and outbreak alerts with zero risk.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => onNavigate('pricing')}
+            className="shrink-0 w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#10b981] hover:bg-emerald-400 text-black font-display font-extrabold text-xs shadow-lg active:scale-98 transition-all flex items-center justify-center gap-1.5"
+          >
+            <span>Try Risk-Free</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </section>
+
       {/* 8 FEATURE CARDS SECTION */}
       <section className="max-w-7xl mx-auto px-4 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
@@ -414,6 +462,42 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
         </div>
       </section>
 
+      {/* DEDICATED "RISK-FREE — TRY FOR 48 HOURS" SECTION */}
+      <section className="max-w-5xl mx-auto px-4 lg:px-8">
+        <div className="rounded-3xl bg-[#17172c] border-2 border-emerald-500/40 p-6 sm:p-10 shadow-2xl space-y-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center mx-auto text-[#10b981] shadow-[0_0_25px_rgba(16,185,129,0.3)]">
+            <ShieldCheck className="w-9 h-9" />
+          </div>
+
+          <div className="space-y-2 max-w-2xl mx-auto">
+            <span className="text-xs uppercase tracking-widest font-bold text-[#10b981]">
+              Zero Risk • 100% Peace of Mind
+            </span>
+            <h2 className="font-display font-black text-2xl sm:text-3xl md:text-4xl text-white">
+              Risk-free — try for 48 hours
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              We want you to feel completely confident. Subscribe to any plan, explore our instant AI photo diagnostics, full global encyclopedia, and clinical first-aid triage tools. If you’re not 100% satisfied within 48 hours, request a full refund with 1 click from your dashboard.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => onNavigate('pricing')}
+              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-[#10b981] hover:bg-emerald-400 text-black font-display font-extrabold text-sm shadow-xl active:scale-98 transition-all flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Unlock Unlimited Access — $4.99/mo</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <p className="text-[11px] sm:text-xs text-slate-400 max-w-lg mx-auto leading-relaxed border-t border-slate-800/80 pt-4">
+            *Valid on first payment only, within 48 hours of subscription. Subsequent payments are non-refundable.
+          </p>
+        </div>
+      </section>
+
       {/* CALL TO ACTION BANNER */}
       <section className="max-w-7xl mx-auto px-4 lg:px-8">
         <div className="relative rounded-3xl bg-gradient-to-r from-[#202042] via-[#2a1a3e] to-[#1a2d3e] p-8 md:p-12 border border-[#3b3b6e] text-center space-y-6 overflow-hidden shadow-2xl">
@@ -438,6 +522,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
               Subscribe Now — $4.99/mo
             </button>
             <button
+              onClick={() => setShowInstallModal(true)}
+              className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-500/50 text-emerald-300 text-sm font-semibold transition-all flex items-center justify-center gap-2"
+            >
+              <Smartphone className="w-4 h-4 text-emerald-400" />
+              Install on Smartphone
+            </button>
+            <button
               onClick={() => onNavigate('encyclopedia')}
               className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-[#141424] hover:bg-black/60 border border-slate-700 text-slate-200 text-sm font-semibold transition-all"
             >
@@ -450,6 +541,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
           </p>
         </div>
       </section>
+
+      {/* Smartphone Install Companion Modal */}
+      <InstallAppModal
+        isOpen={showInstallModal}
+        onClose={() => setShowInstallModal(false)}
+      />
     </div>
   );
 };

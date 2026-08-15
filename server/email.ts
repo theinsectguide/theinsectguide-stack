@@ -170,31 +170,50 @@ function emailWrapper(content: string): string {
  * 1. Email de bienvenue (après inscription)
  */
 export async function sendWelcomeEmail(user: UserDoc) {
-  const subject = 'Welcome to The Insect Guide — Your field companion is ready!';
+  const subject = 'Welcome to The Insect Guide — Complete your Pro setup';
   const content = `
     <h1 style="color: #ffffff; font-size: 22px; font-weight: 800; margin: 0 0 16px 0;">
       Welcome to The Insect Guide, <span style="color: #10b981;">${user.name || 'Explorer'}</span>!
     </h1>
     <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1; margin: 0 0 20px 0;">
-      Your account has been successfully initialized for active monitoring in <strong>${user.region || 'UK'}</strong>. You are now equipped with instant AI vision identification, danger index ratings, and immediate bite & sting first aid guidance.
+      Your account has been successfully created for active monitoring in <strong>${user.region || 'UK'}</strong>.
     </p>
 
     <div style="background-color: #242442; border: 1px solid #3b3b66; border-left: 4px solid #10b981; border-radius: 12px; padding: 20px; margin: 24px 0;">
       <h3 style="color: #ffffff; font-size: 14px; font-weight: 700; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px;">
-        Core Field Capabilities:
+        Your Protection &amp; Field Tools:
       </h3>
       <ul style="margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.8; color: #e2e8f0;">
-        <li><strong style="color: #10b981;">Instant AI Scanner:</strong> Snap any insect or bite mark to instantly detect danger levels and species taxonomy.</li>
-        <li><strong style="color: #e94560;">First Aid Protocol:</strong> Emergency triage instructions for venomous stings and allergic reactions.</li>
-        <li><strong style="color: #2e86ff;">GPS Observation Journal:</strong> Log personal sightings with precise coordinates on interactive satellite maps.</li>
+        <li><strong style="color: #10b981;">Instant AI Scanner:</strong> Snap any insect or bite mark to instantly detect danger levels (0-10) and taxonomy.</li>
+        <li><strong style="color: #e94560;">First Aid Protocols:</strong> Immediate triage instructions for venomous stings and allergic emergencies.</li>
+        <li><strong style="color: #2e86ff;">GPS Observation Journal:</strong> Log personal sightings with coordinates on interactive satellite maps.</li>
       </ul>
     </div>
 
-    <div style="text-align: center; margin: 30px 0 10px 0;">
-      <a href="https://theinsectguide.com" style="display: inline-block; background: linear-gradient(135deg, #10b981, #2e86ff); color: #000000; font-size: 14px; font-weight: 800; text-decoration: none; padding: 14px 28px; border-radius: 10px; box-shadow: 0 4px 14px rgba(16,185,129,0.35);">
-        Start Your First Scan &rarr;
-      </a>
-    </div>
+    <p style="font-size: 14px; line-height: 1.6; color: #cbd5e1; margin: 20px 0 10px 0;">
+      To activate unlimited AI scanning and full emergency medical protocols, sign in below to confirm your Pro plan.
+    </p>
+
+    <!-- High-contrast Bulletproof CTA Button -->
+    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 28px 0 16px 0;">
+      <tr>
+        <td align="center">
+          <table border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+            <tr>
+              <td align="center" style="background-color: #10b981; border-radius: 10px; padding: 15px 32px;">
+                <a href="https://theinsectguide.com/#login" target="_blank" style="font-size: 15px; font-weight: 800; color: #ffffff !important; text-decoration: none; display: inline-block; letter-spacing: 0.2px;">
+                  Sign In to Your Account &rarr;
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0 0 10px 0;">
+      Already selected your plan? Signing in will take you straight to your active field scanner.
+    </p>
   `;
 
   return sendEmailWithBrevo(user.email, user.name, subject, emailWrapper(content));
@@ -210,12 +229,12 @@ export async function sendPaymentConfirmedEmail(user: UserDoc, planName: string,
       Thank You! Pro Membership Activated
     </h1>
     <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1; margin: 0 0 20px 0;">
-      We have confirmed your payment for <strong>The Insect Guide ${planName}</strong> (${amount}). Your account has been upgraded with full Pro entitlements.
+      We have confirmed your payment for <strong>The Insect Guide ${planName}</strong> (${amount}). Your account now has full Pro access enabled.
     </p>
 
-    <div style="background-color: #242442; border: 1px solid #3b3b66; border-left: 4px solid #f5a623; border-radius: 12px; padding: 20px; margin: 24px 0;">
-      <h3 style="color: #f5a623; font-size: 14px; font-weight: 700; margin: 0 0 10px 0;">
-        Order & Coverage Details
+    <div style="background-color: #242442; border: 1px solid #3b3b66; border-left: 4px solid #10b981; border-radius: 12px; padding: 20px; margin: 24px 0;">
+      <h3 style="color: #10b981; font-size: 14px; font-weight: 700; margin: 0 0 10px 0;">
+        Order &amp; Coverage Details
       </h3>
       <table border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 13.5px; color: #cbd5e1; line-height: 1.8;">
         <tr>
@@ -237,8 +256,25 @@ export async function sendPaymentConfirmedEmail(user: UserDoc, planName: string,
       </table>
     </div>
 
-    <p style="font-size: 13.5px; line-height: 1.6; color: #94a3b8;">
-      You can view and manage your account settings or export your field journal at any time from your dashboard.
+    <!-- High-contrast Bulletproof CTA Button -->
+    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 28px 0 16px 0;">
+      <tr>
+        <td align="center">
+          <table border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+            <tr>
+              <td align="center" style="background-color: #2e86ff; border-radius: 10px; padding: 15px 32px;">
+                <a href="https://theinsectguide.com/#scan" target="_blank" style="font-size: 15px; font-weight: 800; color: #ffffff !important; text-decoration: none; display: inline-block; letter-spacing: 0.2px;">
+                  Open Your Pro Dashboard &rarr;
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <p style="font-size: 12.5px; line-height: 1.6; color: #94a3b8; text-align: center;">
+      You can manage your account settings or export your field journal at any time directly from the app.
     </p>
   `;
 
@@ -344,11 +380,22 @@ export async function sendWeeklySeasonalAlertEmail(
       </p>
     </div>
 
-    <div style="text-align: center; margin: 28px 0 10px 0;">
-      <a href="https://theinsectguide.com" style="display: inline-block; background-color: #242444; border: 1px solid #3e3e66; color: #ffffff; font-size: 13px; font-weight: 700; text-decoration: none; padding: 12px 24px; border-radius: 8px;">
-        Open Interactive Hazard Map &rarr;
-      </a>
-    </div>
+    <!-- High-contrast Bulletproof CTA Button -->
+    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 28px 0 16px 0;">
+      <tr>
+        <td align="center">
+          <table border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+            <tr>
+              <td align="center" style="background-color: #2e86ff; border-radius: 10px; padding: 14px 28px;">
+                <a href="https://theinsectguide.com/#alerts" target="_blank" style="font-size: 14px; font-weight: 800; color: #ffffff !important; text-decoration: none; display: inline-block;">
+                  Open Interactive Hazard Map &rarr;
+                </a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
   `;
 
   return sendEmailWithBrevo(user.email, user.name || 'Explorer', subject, emailWrapper(content));
