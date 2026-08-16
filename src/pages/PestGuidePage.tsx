@@ -11,9 +11,11 @@ import {
   Wrench,
   Sparkles,
   Search,
-  Filter,
   Leaf,
   Layers,
+  Utensils,
+  Scissors,
+  Flame,
 } from 'lucide-react';
 
 interface PestItem {
@@ -28,7 +30,6 @@ interface PestItem {
   naturalRemedy: string;
   prevention: string;
   exterminatorCost: string;
-  image: string;
 }
 
 export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void }> = ({ onNavigate }) => {
@@ -64,7 +65,6 @@ export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void }> = ({
       naturalRemedy: 'Food-grade Diatomaceous Earth (DE) dusted along floorboards and bed legs dehydrates bed bug exoskeletons.',
       prevention: 'Inspect hotel mattresses when traveling; keep luggage elevated on racks away from walls.',
       exterminatorCost: '$800 – $2,500 (Requires whole-home heat or chemical treatment)',
-      image: 'https://images.unsplash.com/photo-1546842931-886c185b4c8c?auto=format&fit=crop&w=600&q=80',
     },
     {
       id: 'german-cockroach',
@@ -87,7 +87,6 @@ export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void }> = ({
       naturalRemedy: 'Mix equal parts boric acid powder and powdered sugar as an ingestible stomach poison placed in bottle caps out of pet reach.',
       prevention: 'Clean all food grease, seal all wall plumbing penetrations with expanding foam, repair leaky pipes.',
       exterminatorCost: '$250 – $600',
-      image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80',
     },
     {
       id: 'subterranean-termites',
@@ -110,7 +109,6 @@ export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void }> = ({
       naturalRemedy: 'Orange oil (D-limonene) and beneficial nematodes for localized outdoor garden wood treatment.',
       prevention: 'Maintain minimum 6-inch clearance between soil and exterior wood siding; ensure downspouts divert water 5ft away.',
       exterminatorCost: '$1,200 – $3,500+ (Includes perimeter trenching & warranties)',
-      image: 'https://images.unsplash.com/photo-1546842931-886c185b4c8c?auto=format&fit=crop&w=600&q=80',
     },
     {
       id: 'asian-hornet',
@@ -132,7 +130,6 @@ export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void }> = ({
       naturalRemedy: 'Selective queen funnel traps in early spring with beer, sugar, and cassis bait.',
       prevention: 'Monitor bee apiaries and garden eaves in April/May during queen nest initiation.',
       exterminatorCost: '$150 – $400 (Often subsidized by agricultural councils)',
-      image: 'https://images.unsplash.com/photo-1590424693424-9b555e100f72?auto=format&fit=crop&w=600&q=80',
     },
     {
       id: 'clothes-moth',
@@ -154,7 +151,6 @@ export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void }> = ({
       naturalRemedy: 'Natural cedar wood blocks, dried lavender sachets, and clove essential oil as natural repellents.',
       prevention: 'Store out-of-season woolen garments in vacuum-sealed plastic bags after washing.',
       exterminatorCost: '$150 – $350',
-      image: 'https://images.unsplash.com/photo-1546842931-886c185b4c8c?auto=format&fit=crop&w=600&q=80',
     },
     {
       id: 'carpenter-ants',
@@ -176,7 +172,6 @@ export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void }> = ({
       naturalRemedy: 'Spray trails with white vinegar and peppermint oil to disrupt pheromone foraging scents.',
       prevention: 'Trim tree branches touching the roof; replace moisture-damaged window sills.',
       exterminatorCost: '$250 – $500',
-      image: 'https://images.unsplash.com/photo-1546842931-886c185b4c8c?auto=format&fit=crop&w=600&q=80',
     },
     {
       id: 'tiger-mosquito',
@@ -198,11 +193,65 @@ export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void }> = ({
       naturalRemedy: 'Plant lemon eucalyptus, lemongrass (citronella), and lavender around patio perimeters.',
       prevention: 'Clear roof gutters of leaves and eliminate any stagnant water collection.',
       exterminatorCost: '$120 – $300 (Seasonal barrier fogging)',
-      image: 'https://images.unsplash.com/photo-1546842931-886c185b4c8c?auto=format&fit=crop&w=600&q=80',
+    },
+    {
+      id: 'carpet-beetle',
+      name: 'Varied Carpet Beetle',
+      latin: 'Anthrenus verbasci',
+      category: 'Fabric',
+      urgency: 'Medium',
+      diy: true,
+      signs: [
+        'Small fuzzy brown/gold banded larvae on baseboards and under rugs',
+        'Damage to wool carpets, animal furs, taxidermy, and museum specimens',
+        'Small rounded beetles gathering at sunny windowsills in spring',
+      ],
+      treatment: [
+        'Thorough vacuuming under heavy furniture, heating vents, and closets.',
+        'Apply diatomaceous earth or pyrethrin-based spray to perimeter cracks.',
+        'Wash or steam affected textile items.',
+      ],
+      naturalRemedy: 'Frequent steam-cleaning and vinegar wipe-downs in dark storage areas.',
+      prevention: 'Clean pet hair accumulations and vacuum dark corners regularly.',
+      exterminatorCost: '$150 – $400',
     },
   ];
 
   const categories = ['All', 'Structural', 'Biting / Parasite', 'Food & Pantry', 'Fabric', 'Garden'];
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Structural':
+        return <Home className="w-5 h-5 text-amber-400" />;
+      case 'Biting / Parasite':
+        return <ShieldAlert className="w-5 h-5 text-rose-400" />;
+      case 'Food & Pantry':
+        return <Utensils className="w-5 h-5 text-blue-400" />;
+      case 'Fabric':
+        return <Scissors className="w-5 h-5 text-purple-400" />;
+      case 'Garden':
+        return <Leaf className="w-5 h-5 text-emerald-400" />;
+      default:
+        return <Bug className="w-5 h-5 text-slate-400" />;
+    }
+  };
+
+  const getCategoryBadgeClass = (category: string) => {
+    switch (category) {
+      case 'Structural':
+        return 'bg-amber-950/60 border-amber-500/40 text-amber-300';
+      case 'Biting / Parasite':
+        return 'bg-rose-950/60 border-rose-500/40 text-rose-300';
+      case 'Food & Pantry':
+        return 'bg-blue-950/60 border-blue-500/40 text-blue-300';
+      case 'Fabric':
+        return 'bg-purple-950/60 border-purple-500/40 text-purple-300';
+      case 'Garden':
+        return 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300';
+      default:
+        return 'bg-slate-900 border-slate-700 text-slate-300';
+    }
+  };
 
   const filteredPests = pests.filter((p) => {
     const matchesSearch =
@@ -222,10 +271,10 @@ export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void }> = ({
           <span>Infestation Diagnosis & Eradication Guide</span>
         </div>
         <h1 className="font-display font-black text-xl sm:text-2xl md:text-4xl text-white">
-          Pest Control & Infestation Hub
+          Pest Control &amp; Infestation Hub
         </h1>
         <p className="text-xs sm:text-sm text-slate-400 max-w-xl mx-auto px-1">
-          Identify household infestations, calculate exterminator costs, and choose between DIY natural solutions and professional eradication.
+          Clinical guide to identify household infestations, warning signs, eradication protocols, and professional exterminator cost estimates.
         </p>
       </div>
 
@@ -234,10 +283,10 @@ export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void }> = ({
         <div className="space-y-1 text-center sm:text-left">
           <h3 className="font-display font-bold text-sm sm:text-base text-white flex items-center justify-center sm:justify-start gap-2">
             <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>Unsure what's infesting your home?</span>
+            <span>Unsure what's infesting your property?</span>
           </h3>
           <p className="text-xs text-slate-300">
-            Take a photo of droppings, wood damage, or live bugs for instant AI diagnosis.
+            Take a photo of droppings, wood damage, or live specimens for instant AI vision classification.
           </p>
         </div>
         <button
@@ -279,88 +328,90 @@ export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void }> = ({
         </div>
       </div>
 
-      {/* PEST GRID */}
+      {/* PEST GRID — Clean Diagnostic Cards (No Inaccurate Stock Photos) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {filteredPests.map((pest) => (
           <div
             key={pest.id}
-            className="rounded-2xl sm:rounded-3xl bg-[#1c1c34] border border-[#2e2e50] overflow-hidden flex flex-col justify-between hover:border-slate-500 transition-all shadow-xl group"
+            className="rounded-2xl sm:rounded-3xl bg-[#1c1c34] border border-[#2e2e50] p-4 sm:p-5 flex flex-col justify-between hover:border-slate-500 transition-all shadow-xl group space-y-4"
           >
-            <div>
-              {/* Header Image */}
-              <div className="relative aspect-[16/10] bg-black overflow-hidden">
-                <img
-                  src={pest.image}
-                  alt={pest.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="absolute top-2.5 right-2.5 flex gap-1.5">
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-md ${
-                      pest.urgency === 'Critical'
-                        ? 'bg-rose-600 text-white'
-                        : pest.urgency === 'High'
-                        ? 'bg-amber-500 text-black'
-                        : 'bg-blue-600 text-white'
-                    }`}
-                  >
-                    {pest.urgency} Urgency
+            <div className="space-y-3.5">
+              {/* Header with Icon, Category & Urgency Badge */}
+              <div className="flex items-start justify-between gap-2 border-b border-[#282848] pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-xl bg-[#141424] border border-slate-700 flex items-center justify-center shrink-0">
+                    {getCategoryIcon(pest.category)}
+                  </div>
+                  <div>
+                    <span className={`px-2 py-0.5 rounded-md border text-[10px] font-mono font-semibold ${getCategoryBadgeClass(pest.category)}`}>
+                      {pest.category}
+                    </span>
+                  </div>
+                </div>
+
+                <span
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider shadow-sm ${
+                    pest.urgency === 'Critical'
+                      ? 'bg-rose-600 text-white'
+                      : pest.urgency === 'High'
+                      ? 'bg-amber-500 text-black font-bold'
+                      : 'bg-blue-600 text-white'
+                  }`}
+                >
+                  {pest.urgency} Urgency
+                </span>
+              </div>
+
+              {/* Names */}
+              <div>
+                <h3 className="font-display font-bold text-base sm:text-lg text-white group-hover:text-[#f5a623] transition-colors">
+                  {pest.name}
+                </h3>
+                <p className="text-xs italic text-slate-400 font-serif">{pest.latin}</p>
+              </div>
+
+              {/* Treatment Scope & Exterminator Cost Badge */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-2 rounded-xl bg-[#141424] border border-slate-800 space-y-0.5">
+                  <span className="text-[10px] text-slate-400 block">Treatment:</span>
+                  <span className={`font-semibold text-[11px] ${pest.diy ? 'text-[#10b981]' : 'text-[#e94560]'}`}>
+                    {pest.diy ? '✓ DIY Treatable' : '⚠️ Pro Required'}
                   </span>
                 </div>
-                <div className="absolute bottom-2 left-3">
-                  <span className="px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-sm text-[10px] text-slate-300 font-mono">
-                    {pest.category}
+
+                <div className="p-2 rounded-xl bg-[#141424] border border-slate-800 space-y-0.5">
+                  <span className="text-[10px] text-slate-400 block">Est. Pro Cost:</span>
+                  <span className="font-bold text-[11px] text-amber-300 truncate block">
+                    {pest.exterminatorCost.split('(')[0]}
                   </span>
                 </div>
               </div>
 
-              {/* Body */}
-              <div className="p-4 sm:p-5 space-y-2.5">
-                <div>
-                  <h3 className="font-display font-bold text-base sm:text-lg text-white group-hover:text-[#f5a623] transition-colors">
-                    {pest.name}
-                  </h3>
-                  <p className="text-xs italic text-slate-400">{pest.latin}</p>
-                </div>
-
-                {/* Quick DIY indicator */}
-                <div className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded-xl bg-[#141424] border border-slate-800">
-                  <span className="text-slate-400 text-[11px]">Treatment Scope:</span>
-                  <span
-                    className={`font-semibold text-xs ${
-                      pest.diy ? 'text-[#10b981]' : 'text-[#e94560]'
-                    }`}
-                  >
-                    {pest.diy ? '✓ DIY Treatable' : '⚠️ Pro Needed'}
-                  </span>
-                </div>
-
-                {/* Key signs */}
-                <div className="space-y-1">
-                  <span className="text-[11px] font-bold text-slate-300 block">Common Warning Signs:</span>
-                  <ul className="text-[11px] text-slate-400 space-y-1">
-                    {pest.signs.slice(0, 2).map((s, idx) => (
-                      <li key={idx} className="line-clamp-1 flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#f5a623] shrink-0"></span>
-                        <span className="truncate">{s}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              {/* Warning Signs Preview */}
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Key Infestation Signs:</span>
+                </span>
+                <ul className="text-[11px] text-slate-300 space-y-1">
+                  {pest.signs.slice(0, 2).map((s, idx) => (
+                    <li key={idx} className="line-clamp-1 flex items-start gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#f5a623] shrink-0 mt-1.5"></span>
+                      <span className="leading-snug">{s}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
 
-            {/* Card Footer Button */}
-            <div className="p-4 sm:p-5 pt-0">
-              <button
-                onClick={() => setActiveModalPest(pest)}
-                className="w-full min-h-[42px] py-2.5 rounded-xl bg-[#28284c] hover:bg-[#343460] text-slate-200 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
-              >
-                <Wrench className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span>View Full Treatment & Costs</span>
-              </button>
-            </div>
+            {/* Action Button */}
+            <button
+              onClick={() => setActiveModalPest(pest)}
+              className="w-full min-h-[42px] py-2.5 rounded-xl bg-[#28284c] hover:bg-[#343460] text-slate-200 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Wrench className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span>View Full Treatment &amp; Costs</span>
+            </button>
           </div>
         ))}
       </div>
@@ -370,23 +421,30 @@ export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void }> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150">
           <div className="bg-[#1c1c34] border border-slate-700 rounded-2xl sm:rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-6">
             {/* Modal Header */}
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <h3 className="font-display font-black text-xl sm:text-2xl text-white">
-                    {activeModalPest.name}
-                  </h3>
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase ${
-                      activeModalPest.urgency === 'Critical'
-                        ? 'bg-rose-600 text-white'
-                        : 'bg-amber-500 text-black'
-                    }`}
-                  >
-                    {activeModalPest.urgency}
-                  </span>
+            <div className="flex items-start justify-between gap-2 border-b border-[#282848] pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-[#141424] border border-slate-700 flex items-center justify-center shrink-0">
+                  {getCategoryIcon(activeModalPest.category)}
                 </div>
-                <p className="text-xs italic text-slate-400">{activeModalPest.latin}</p>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <h3 className="font-display font-black text-xl sm:text-2xl text-white">
+                      {activeModalPest.name}
+                    </h3>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase ${
+                        activeModalPest.urgency === 'Critical'
+                          ? 'bg-rose-600 text-white'
+                          : activeModalPest.urgency === 'High'
+                          ? 'bg-amber-500 text-black'
+                          : 'bg-blue-600 text-white'
+                      }`}
+                    >
+                      {activeModalPest.urgency}
+                    </span>
+                  </div>
+                  <p className="text-xs italic text-slate-400 font-serif">{activeModalPest.latin}</p>
+                </div>
               </div>
 
               <button
@@ -412,13 +470,14 @@ export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void }> = ({
 
             {/* Infestation Signs */}
             <div className="space-y-2">
-              <h4 className="font-display font-bold text-xs uppercase text-slate-300 tracking-wider">
-                Infestation Indicators:
+              <h4 className="font-display font-bold text-xs uppercase text-slate-300 tracking-wider flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>Infestation Indicators:</span>
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 {activeModalPest.signs.map((s, idx) => (
                   <div key={idx} className="p-2.5 rounded-xl bg-[#141424] border border-slate-800 text-slate-300 flex items-start gap-2">
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#f5a623] shrink-0 mt-1.5"></span>
                     <span>{s}</span>
                   </div>
                 ))}
@@ -447,7 +506,7 @@ export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void }> = ({
             <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-emerald-950/30 border border-emerald-900/50 space-y-1.5 text-xs text-emerald-200">
               <span className="font-bold flex items-center gap-1.5 text-[#10b981]">
                 <Leaf className="w-4 h-4 shrink-0" />
-                <span>Natural & Non-Toxic Solution:</span>
+                <span>Natural &amp; Non-Toxic Solution:</span>
               </span>
               <p className="text-slate-300 leading-relaxed">{activeModalPest.naturalRemedy}</p>
             </div>

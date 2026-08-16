@@ -29,35 +29,59 @@ import { SettingsPage } from './pages/SettingsPage';
 const PRO_PROTECTED_TABS = ['scan', 'journal', 'pest', 'encyclopedia', 'first-aid', 'alerts', 'weather'];
 
 function AppContent() {
-  const { isAuthenticated, isPro, isAdmin, isLoading } = useAuth();
+  const { user, isAuthenticated, isPro, isAdmin, isLoading } = useAuth();
   const [currentTab, setCurrentTab] = useState<string>('landing');
 
-  const checkAccessAndResolveTab = (tab: string): string => {
+  const checkAccessAndResolveTab = (tab: string, userOverride?: any): string => {
     // Sanitize input: strip query parameters or bypass arguments (e.g. "?pro=true", "?bypass=1")
     let cleanTab = (tab || 'landing').split('?')[0].split('&')[0].trim().toLowerCase();
 
+    const effectiveUser = userOverride !== undefined ? userOverride : user;
+    const effectiveIsAuth = !!effectiveUser || isAuthenticated || !!localStorage.getItem('insect_guide_token');
+    const effectiveIsAdmin = effectiveUser?.role === 'admin' || isAdmin;
+    const effectiveIsPro = effectiveUser?.tier === 'pro' || effectiveUser?.role === 'admin' || isPro;
+
     // Strict Security Guard: Only users with role === 'admin' can access admin-dashboard
-    if (cleanTab === 'admin-dashboard' && !isAdmin) {
+    if (cleanTab === 'admin-dashboard' && !effectiveIsAdmin) {
       return 'admin-login';
     }
 
     // Protected settings page requires authentication
-    if (cleanTab === 'settings' && !isAuthenticated) {
+    if (cleanTab === 'settings' && !effectiveIsAuth) {
       return 'login';
     }
 
     // Pro-only tool tabs protection
     if (PRO_PROTECTED_TABS.includes(cleanTab)) {
-      if (!isAuthenticated) {
+      if (!effectiveIsAuth) {
         return 'login';
       }
-      if (!isPro) {
+      if (!effectiveIsPro) {
         return 'pricing';
       }
     }
 
     return cleanTab;
   };
+
+  // Immediate redirect after login/register if user is currently on login or register screen
+  useEffect(() => {
+    if (user && !isLoading) {
+      if (currentTab === 'login' || currentTab === 'register') {
+        if (user.role === 'admin') {
+          handleNavigate('admin-dashboard');
+        } else if (user.tier === 'pro') {
+          handleNavigate('scan');
+        } else {
+          handleNavigate('pricing');
+        }
+      } else if (currentTab === 'admin-login') {
+        if (user.role === 'admin') {
+          handleNavigate('admin-dashboard');
+        }
+      }
+    }
+  }, [user, isLoading]);
 
   // Handle URL hash routing or initial state
   useEffect(() => {
@@ -75,7 +99,7 @@ function AppContent() {
     }
     window.addEventListener('hashchange', handleHash);
     return () => window.removeEventListener('hashchange', handleHash);
-  }, [isAuthenticated, isPro, isAdmin, isLoading]);
+  }, [user, isAuthenticated, isPro, isAdmin, isLoading]);
 
   // Route protection watcher
   useEffect(() => {
@@ -85,10 +109,10 @@ function AppContent() {
       setCurrentTab(resolved);
       window.location.hash = resolved;
     }
-  }, [currentTab, isAuthenticated, isPro, isAdmin, isLoading]);
+  }, [currentTab, user, isAuthenticated, isPro, isAdmin, isLoading]);
 
-  const handleNavigate = (tab: string) => {
-    const resolved = checkAccessAndResolveTab(tab);
+  const handleNavigate = (tab: string, userOverride?: any) => {
+    const resolved = checkAccessAndResolveTab(tab, userOverride);
     setCurrentTab(resolved);
     window.location.hash = resolved;
     window.scrollTo({ top: 0, behavior: 'smooth' });

@@ -162,6 +162,43 @@ export async function optionalAuth(req: AuthRequest, res: Response, next: NextFu
   next();
 }
 
+export async function seedDemoUser() {
+  const demoEmail = 'demo@theinsectguide.com'.toLowerCase();
+  const demoPassword = 'Theinsectguide_demo';
+
+  const existing = await findUserByEmail(demoEmail);
+  const hashedPassword = await hashPassword(demoPassword);
+
+  if (!existing) {
+    await createUser({
+      email: demoEmail,
+      password: hashedPassword,
+      name: 'Demo Entomologist',
+      region: 'UK',
+      level: 'Expert',
+      tier: 'pro',
+      subscription_status: 'active',
+      subscription_plan: 'annual',
+      role: 'user', // strictly regular user, NOT admin
+      created_at: new Date().toISOString(),
+      last_payment_date: new Date().toISOString(),
+      scans_count: 0,
+      species_found: 0,
+    });
+    console.log(`[Seed] Demo Pro user initialized: ${demoEmail}`);
+  } else {
+    // Ensure credentials and Pro tier are always synchronized
+    await updateUser(existing._id, {
+      password: hashedPassword,
+      tier: 'pro',
+      subscription_status: 'active',
+      subscription_plan: 'annual',
+      role: 'user', // ensure NOT admin
+    });
+    console.log(`[Seed] Demo Pro user updated/verified: ${demoEmail}`);
+  }
+}
+
 export async function seedAdminUser() {
   const adminEmail = (process.env.ADMIN_EMAIL || 'admin@theinsectguide.com').toLowerCase();
   const adminPassword = process.env.ADMIN_PASSWORD || 'AdminSecure2026!';
@@ -179,8 +216,8 @@ export async function seedAdminUser() {
       subscription_status: 'active',
       role: 'admin',
       created_at: new Date().toISOString(),
-      scans_count: 350,
-      species_found: 120,
+      scans_count: 0,
+      species_found: 0,
     });
     console.log(`Admin account initialized for: ${adminEmail}`);
   } else if (existing.role !== 'admin') {

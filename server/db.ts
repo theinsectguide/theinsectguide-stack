@@ -220,20 +220,25 @@ export async function createScan(scan: Omit<ScanDoc, '_id'>): Promise<ScanDoc> {
   }
   memoryStore.scans.set(newId, doc);
 
-  // Increment user scans count
+  // Sync real user scans count and level
   const user = await findUserById(scan.user_id);
   if (user) {
-    const newScans = (user.scans_count || 0) + 1;
-    // calculate level
+    const userScans = await getScansByUserId(user._id);
+    const userJournals = await getJournalEntriesByUserId(user._id);
+    const uniqueSpecies = new Set(
+      userJournals.map(j => (j.insect_name || j.scan_result?.common_name || '').trim().toLowerCase()).filter(Boolean)
+    );
+
+    const totalScans = userScans.length;
     let newLevel: UserDoc['level'] = 'Beginner';
-    if (newScans > 200) newLevel = 'Master';
-    else if (newScans >= 51) newLevel = 'Expert';
-    else if (newScans >= 11) newLevel = 'Amateur';
+    if (totalScans > 200) newLevel = 'Master';
+    else if (totalScans >= 51) newLevel = 'Expert';
+    else if (totalScans >= 11) newLevel = 'Amateur';
 
     await updateUser(user._id, {
-      scans_count: newScans,
+      scans_count: totalScans,
       level: newLevel,
-      species_found: (user.species_found || 0) + 1,
+      species_found: uniqueSpecies.size,
     });
   }
 
@@ -284,6 +289,19 @@ export async function createJournalEntry(entry: Omit<JournalEntryDoc, '_id'>): P
     await mongoDb.collection('journal_entries').insertOne({ ...doc, _id: new ObjectId(newId) as any });
   }
   memoryStore.journal_entries.set(newId, doc);
+
+  // Sync species_found count
+  const user = await findUserById(entry.user_id);
+  if (user) {
+    const userJournals = await getJournalEntriesByUserId(user._id);
+    const uniqueSpecies = new Set(
+      userJournals.map(j => (j.insect_name || j.scan_result?.common_name || '').trim().toLowerCase()).filter(Boolean)
+    );
+    await updateUser(user._id, {
+      species_found: uniqueSpecies.size,
+    });
+  }
+
   saveLocalStore();
   return doc;
 }
@@ -317,14 +335,35 @@ export async function updateJournalEntry(id: string, updates: Partial<JournalEnt
 }
 
 export async function deleteJournalEntry(id: string): Promise<boolean> {
+  let userId: string | null = null;
   if (isConnectedToMongo && mongoDb) {
     try {
+      const existing = await mongoDb.collection('journal_entries').findOne({ _id: new ObjectId(id) });
+      if (existing) userId = existing.user_id;
       await mongoDb.collection('journal_entries').deleteOne({ _id: new ObjectId(id) });
     } catch {
+      const existing = await mongoDb.collection('journal_entries').findOne({ _id: id as any });
+      if (existing) userId = existing.user_id;
       await mongoDb.collection('journal_entries').deleteOne({ _id: id as any });
     }
   }
-  memoryStore.journal_entries.delete(id);
+  const memEntry = memoryStore.journal_entries.get(id);
+  if (memEntry) {
+    userId = userId || memEntry.user_id;
+    memoryStore.journal_entries.delete(id);
+  }
+
+  // Sync species_found count
+  if (userId) {
+    const userJournals = await getJournalEntriesByUserId(userId);
+    const uniqueSpecies = new Set(
+      userJournals.map(j => (j.insect_name || j.scan_result?.common_name || '').trim().toLowerCase()).filter(Boolean)
+    );
+    await updateUser(userId, {
+      species_found: uniqueSpecies.size,
+    });
+  }
+
   saveLocalStore();
   return true;
 }

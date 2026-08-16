@@ -46,22 +46,24 @@ export async function identifyInsectWithClaude(
 ): Promise<ScanResult> {
   const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9+]+;base64,/, '');
 
-  // 1. Try Gemini Vision (gemini-3.7-flash)
+  // 1. Try Gemini Vision (gemini-3.7-flash, then gemini-3.1-flash-lite if rate limited)
   const ai = getGenAI();
   if (ai) {
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: {
-          parts: [
-            {
-              inlineData: {
-                mimeType: mimeType || 'image/jpeg',
-                data: cleanBase64,
+    const modelsToTry = ['gemini-3.7-flash', 'gemini-3.1-flash-lite'];
+    for (const modelName of modelsToTry) {
+      try {
+        const response = await ai.models.generateContent({
+          model: modelName,
+          contents: {
+            parts: [
+              {
+                inlineData: {
+                  mimeType: mimeType || 'image/jpeg',
+                  data: cleanBase64,
+                },
               },
-            },
-            {
-              text: `You are an expert entomologist, taxonomist, and pest hazard analyst. 
+              {
+                text: `You are an expert entomologist, taxonomist, and pest hazard analyst. 
 Analyze the provided insect, arachnid, or bug image. The user is located in region: ${userRegion || 'UK'}.
 
 Respond strictly with a valid JSON object matching this schema:
@@ -98,29 +100,30 @@ If no insect, bug, spider, caterpillar, or arachnid is visible in the photo, ret
 {"error": "no_insect_detected"}
 
 Respond only with the raw JSON object.`,
-            },
-          ],
-        },
-        config: {
-          responseMimeType: 'application/json',
-        },
-      });
+              },
+            ],
+          },
+          config: {
+            responseMimeType: 'application/json',
+          },
+        });
 
-      const text = response.text;
-      if (text) {
-        const parsed = extractAndValidateJson(text);
-        if (parsed) {
-          if (parsed.error === 'no_insect_detected') {
-            throw new Error('no_insect_detected');
+        const text = response.text;
+        if (text) {
+          const parsed = extractAndValidateJson(text);
+          if (parsed) {
+            if (parsed.error === 'no_insect_detected') {
+              throw new Error('no_insect_detected');
+            }
+            return normalizeResult(parsed);
           }
-          return normalizeResult(parsed);
         }
+      } catch (err: any) {
+        if (err.message === 'no_insect_detected') {
+          throw err;
+        }
+        // If 429 or other error, proceed to try next model or fallback
       }
-    } catch (err: any) {
-      if (err.message === 'no_insect_detected') {
-        throw err;
-      }
-      console.warn('Gemini vision identification fallback:', err.message);
     }
   }
 
@@ -193,19 +196,21 @@ export async function analyzePestWithClaude(
   // 1. Try Gemini Vision
   const ai = getGenAI();
   if (ai) {
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.7-flash',
-        contents: {
-          parts: [
-            {
-              inlineData: {
-                mimeType: mimeType || 'image/jpeg',
-                data: cleanBase64,
+    const modelsToTry = ['gemini-3.7-flash', 'gemini-3.1-flash-lite'];
+    for (const modelName of modelsToTry) {
+      try {
+        const response = await ai.models.generateContent({
+          model: modelName,
+          contents: {
+            parts: [
+              {
+                inlineData: {
+                  mimeType: mimeType || 'image/jpeg',
+                  data: cleanBase64,
+                },
               },
-            },
-            {
-              text: `You are a certified master pest control professional and structural entomologist.
+              {
+                text: `You are a certified master pest control professional and structural entomologist.
 Analyze this specimen and the damage context:
 Location found: ${pestDetails?.location_found || 'Household/Garden'}. 
 Signs observed: ${pestDetails?.damage_observed || 'General inspection'}.
@@ -241,21 +246,22 @@ Respond strictly with a valid JSON object matching this schema:
 }
 
 Respond ONLY with the JSON object.`,
-            },
-          ],
-        },
-        config: {
-          responseMimeType: 'application/json',
-        },
-      });
+              },
+            ],
+          },
+          config: {
+            responseMimeType: 'application/json',
+          },
+        });
 
-      const text = response.text;
-      if (text) {
-        const parsed = extractAndValidateJson(text);
-        if (parsed) return normalizeResult(parsed);
+        const text = response.text;
+        if (text) {
+          const parsed = extractAndValidateJson(text);
+          if (parsed) return normalizeResult(parsed);
+        }
+      } catch (err: any) {
+        // Continue to next model
       }
-    } catch (err: any) {
-      console.warn('Gemini pest analysis fallback:', err.message);
     }
   }
 

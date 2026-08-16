@@ -83,6 +83,7 @@ export interface JournalEntry {
   };
   notes?: string;
   status: 'found' | 'observed' | 'reported' | 'photographed';
+  scan_result?: ScanResult;
 }
 
 export interface Alert {
@@ -113,9 +114,9 @@ export interface Species {
   description: string;
   first_aid: string;
   when_to_call_emergency: string;
-  photo_url: string;
-  look_alikes: string[];
-  fun_fact: string;
+  photo_url?: string;
+  look_alikes?: string[];
+  fun_fact?: string;
   country_top_ten?: {
     country: 'UK' | 'US' | 'CA' | 'AU' | 'EU';
     rank: number;

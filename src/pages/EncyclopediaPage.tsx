@@ -17,6 +17,11 @@ import {
   ChevronRight,
   Loader2,
   Skull,
+  Bug,
+  ShieldCheck,
+  AlertTriangle,
+  Leaf,
+  X,
 } from 'lucide-react';
 
 export const EncyclopediaPage: React.FC<{ onNavigate: (tab: string) => void }> = ({ onNavigate }) => {
@@ -55,6 +60,23 @@ export const EncyclopediaPage: React.FC<{ onNavigate: (tab: string) => void }> =
       }
     } catch (err) {
       console.warn('Top 10 fetch error:', err);
+    }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category.toLowerCase()) {
+      case 'venomous':
+        return <Skull className="w-4 h-4 text-rose-400" />;
+      case 'dangerous':
+        return <Flame className="w-4 h-4 text-amber-400" />;
+      case 'pest':
+        return <Bug className="w-4 h-4 text-orange-400" />;
+      case 'protected':
+        return <Shield className="w-4 h-4 text-purple-400" />;
+      case 'useful':
+        return <Leaf className="w-4 h-4 text-emerald-400" />;
+      default:
+        return <ShieldCheck className="w-4 h-4 text-emerald-400" />;
     }
   };
 
@@ -205,7 +227,7 @@ export const EncyclopediaPage: React.FC<{ onNavigate: (tab: string) => void }> =
         </div>
       </div>
 
-      {/* SPECIES GRID */}
+      {/* SPECIES GRID (NO PHOTOS, CLEAN SCIENTIFIC DOSSIER) */}
       {loading ? (
         <div className="p-12 text-center text-slate-400 space-y-2">
           <Loader2 className="w-8 h-8 animate-spin mx-auto text-purple-400" />
@@ -225,55 +247,66 @@ export const EncyclopediaPage: React.FC<{ onNavigate: (tab: string) => void }> =
             <div
               key={sp.id}
               onClick={() => setActiveSpecies(sp)}
-              className="rounded-2xl sm:rounded-3xl bg-[#1c1c34] border border-[#2d2d50] overflow-hidden hover:border-purple-500/80 transition-all cursor-pointer shadow-xl flex flex-col justify-between group"
+              className="rounded-2xl sm:rounded-3xl bg-[#1c1c34] border border-[#2d2d50] hover:border-purple-500/80 transition-all cursor-pointer shadow-xl flex flex-col justify-between group p-4 sm:p-5 space-y-4"
             >
-              <div>
-                {/* Photo */}
-                <div className="relative aspect-[16/10] bg-black overflow-hidden">
-                  <img
-                    src={sp.photo_url}
-                    alt={sp.common_name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute top-2.5 right-2.5">
-                    <DangerBadge status={sp.category} dangerLevel={sp.danger_level} size="sm" />
-                  </div>
-                  <div className="absolute bottom-2 left-2.5 flex gap-1">
-                    {sp.regions.map((reg) => (
-                      <span
-                        key={reg}
-                        className="px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[9px] font-mono text-slate-300"
-                      >
-                        {reg}
+              <div className="space-y-3">
+                {/* Top classification bar */}
+                <div className="flex items-start justify-between gap-2 border-b border-slate-800/80 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-[#141426] border border-slate-800 flex items-center justify-center shrink-0">
+                      {getCategoryIcon(sp.category)}
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                        {sp.category}
                       </span>
-                    ))}
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {sp.regions.map((reg) => (
+                          <span
+                            key={reg}
+                            className="px-1.5 py-0.2 rounded bg-purple-950/60 border border-purple-800/50 text-[9px] font-mono text-purple-300"
+                          >
+                            {reg}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   </div>
+                  <DangerBadge status={sp.category} dangerLevel={sp.danger_level} size="sm" />
                 </div>
 
-                {/* Body */}
-                <div className="p-4 sm:p-5 space-y-2">
-                  <div>
-                    <h3 className="font-display font-bold text-base sm:text-lg text-white group-hover:text-purple-300 transition-colors">
-                      {sp.common_name}
-                    </h3>
-                    <p className="text-xs italic text-slate-400 font-serif">{sp.latin_name}</p>
+                {/* Nomenclature */}
+                <div>
+                  <h3 className="font-display font-bold text-base sm:text-lg text-white group-hover:text-purple-300 transition-colors leading-snug">
+                    {sp.common_name}
+                  </h3>
+                  <p className="text-xs italic text-slate-400 font-serif pt-0.5">{sp.latin_name}</p>
+                </div>
+
+                {/* Description Excerpt */}
+                <p className="text-xs text-slate-300 line-clamp-3 leading-relaxed">
+                  {sp.description}
+                </p>
+
+                {/* Safety & Behavior Indicators */}
+                <div className="grid grid-cols-2 gap-1.5 pt-1">
+                  <div className="p-2 rounded-lg bg-[#141424] border border-slate-800/80 text-[11px] flex items-center justify-between">
+                    <span className="text-slate-400 text-[10px]">Sting:</span>
+                    <span className={`font-semibold ${sp.can_sting ? 'text-amber-400' : 'text-emerald-400'}`}>
+                      {sp.can_sting ? '⚠️ Yes' : '✓ No'}
+                    </span>
                   </div>
-
-                  <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
-                    {sp.description}
-                  </p>
-
-                  <div className="flex items-center gap-3 text-[11px] text-slate-400 pt-1">
-                    <span>Sting: {sp.can_sting ? '⚠️ Yes' : '✓ No'}</span>
-                    <span>•</span>
-                    <span>Bite: {sp.can_bite ? '⚠️ Yes' : '✓ No'}</span>
+                  <div className="p-2 rounded-lg bg-[#141424] border border-slate-800/80 text-[11px] flex items-center justify-between">
+                    <span className="text-slate-400 text-[10px]">Bite:</span>
+                    <span className={`font-semibold ${sp.can_bite ? 'text-amber-400' : 'text-emerald-400'}`}>
+                      {sp.can_bite ? '⚠️ Yes' : '✓ No'}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 sm:p-5 pt-0">
-                <button className="w-full min-h-[40px] py-2.5 rounded-xl bg-[#28284c] hover:bg-[#343460] text-purple-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors">
+              <div className="pt-2">
+                <button className="w-full min-h-[38px] py-2 rounded-xl bg-[#28284c] group-hover:bg-purple-600 group-hover:text-white text-purple-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
                   <span>View Species Profile</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
@@ -283,88 +316,139 @@ export const EncyclopediaPage: React.FC<{ onNavigate: (tab: string) => void }> =
         </div>
       )}
 
-      {/* SPECIES DETAIL MODAL */}
+      {/* SPECIES DETAIL MODAL (NO PHOTOS, CLEAN SCIENTIFIC PROFILE) */}
       {activeSpecies && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150">
-          <div className="bg-[#1c1c34] border border-slate-700 rounded-2xl sm:rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-6">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <h3 className="font-display font-black text-xl sm:text-2xl text-white">
-                    {activeSpecies.common_name}
-                  </h3>
+          <div className="bg-[#1c1c34] border border-slate-700 rounded-2xl sm:rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 shadow-2xl space-y-5">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between gap-3 border-b border-[#2a2a48] pb-4">
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-[#141426] border border-slate-800 flex items-center justify-center">
+                    {getCategoryIcon(activeSpecies.category)}
+                  </div>
                   <DangerBadge status={activeSpecies.category} dangerLevel={activeSpecies.danger_level} size="md" />
+                  <span className="px-2.5 py-0.5 rounded-full bg-purple-950/80 border border-purple-500/40 text-[10px] font-mono text-purple-300">
+                    Active: {activeSpecies.active_seasons.join(', ')}
+                  </span>
                 </div>
-                <p className="text-xs italic text-slate-400 font-serif">{activeSpecies.latin_name}</p>
+                <h3 className="font-display font-black text-xl sm:text-2xl text-white pt-1">
+                  {activeSpecies.common_name}
+                </h3>
+                <p className="text-xs sm:text-sm italic text-slate-400 font-serif">{activeSpecies.latin_name}</p>
               </div>
+
               <button
                 onClick={() => setActiveSpecies(null)}
-                className="w-8 h-8 rounded-lg text-slate-400 hover:text-white bg-slate-800 flex items-center justify-center shrink-0"
+                className="w-8 h-8 rounded-lg text-slate-400 hover:text-white bg-[#202038] flex items-center justify-center shrink-0"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Photo */}
-            <div className="rounded-xl sm:rounded-2xl overflow-hidden aspect-video bg-black border border-slate-700">
-              <img
-                src={activeSpecies.photo_url}
-                alt={activeSpecies.common_name}
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-            </div>
-
-            {/* Metrics */}
+            {/* Safety & Hazard Biometrics */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-              <div className="p-2.5 rounded-xl bg-[#141424] border border-slate-800 text-center">
+              <div className="p-3 rounded-xl bg-[#141424] border border-slate-800 text-center space-y-0.5">
                 <span className="text-[10px] text-slate-400 block">Sting Hazard</span>
-                <span className="font-bold text-white">{activeSpecies.can_sting ? '⚠️ Yes' : '✓ None'}</span>
+                <span className={`font-bold ${activeSpecies.can_sting ? 'text-amber-400' : 'text-emerald-400'}`}>
+                  {activeSpecies.can_sting ? '⚠️ Yes (Venomous)' : '✓ None'}
+                </span>
               </div>
-              <div className="p-2.5 rounded-xl bg-[#141424] border border-slate-800 text-center">
+              <div className="p-3 rounded-xl bg-[#141424] border border-slate-800 text-center space-y-0.5">
                 <span className="text-[10px] text-slate-400 block">Bite Hazard</span>
-                <span className="font-bold text-white">{activeSpecies.can_bite ? '⚠️ Yes' : '✓ None'}</span>
+                <span className={`font-bold ${activeSpecies.can_bite ? 'text-amber-400' : 'text-emerald-400'}`}>
+                  {activeSpecies.can_bite ? '⚠️ Yes (Can Bite)' : '✓ None'}
+                </span>
               </div>
-              <div className="p-2.5 rounded-xl bg-[#141424] border border-slate-800 text-center">
+              <div className="p-3 rounded-xl bg-[#141424] border border-slate-800 text-center space-y-0.5">
                 <span className="text-[10px] text-slate-400 block">Child Safety</span>
-                <span className="font-bold text-white">{activeSpecies.dangerous_to_children ? '⚠️ High Caution' : '✓ Safe'}</span>
+                <span className={`font-bold ${activeSpecies.dangerous_to_children ? 'text-rose-400' : 'text-emerald-400'}`}>
+                  {activeSpecies.dangerous_to_children ? '⚠️ High Caution' : '✓ Safe'}
+                </span>
               </div>
-              <div className="p-2.5 rounded-xl bg-[#141424] border border-slate-800 text-center">
+              <div className="p-3 rounded-xl bg-[#141424] border border-slate-800 text-center space-y-0.5">
                 <span className="text-[10px] text-slate-400 block">Pet Safety</span>
-                <span className="font-bold text-white">{activeSpecies.dangerous_to_pets ? '⚠️ Toxic Risk' : '✓ Safe'}</span>
+                <span className={`font-bold ${activeSpecies.dangerous_to_pets ? 'text-rose-400' : 'text-emerald-400'}`}>
+                  {activeSpecies.dangerous_to_pets ? '⚠️ Toxic Risk' : '✓ Safe'}
+                </span>
               </div>
             </div>
 
-            {/* Description & Habitat */}
-            <div className="space-y-3 text-xs sm:text-sm text-slate-300 leading-relaxed">
-              <div>
-                <h4 className="font-bold text-white text-xs uppercase tracking-wider mb-1">Description</h4>
-                <p>{activeSpecies.description}</p>
-              </div>
-
-              <div className="p-3 rounded-xl bg-[#141424] border border-slate-800">
-                <span className="text-[10px] text-slate-400 block">Habitat & Environment:</span>
-                <p className="text-slate-200">{activeSpecies.habitat}</p>
-              </div>
-            </div>
-
-            {/* First Aid */}
-            <div className="p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-rose-950/40 border border-rose-900/60 space-y-2 text-xs">
-              <span className="font-bold text-[#e94560] flex items-center gap-1.5">
-                <HeartPulse className="w-4 h-4" />
-                First Aid Guidance:
+            {/* Geographical Presence */}
+            <div className="p-3 rounded-xl bg-[#141424] border border-slate-800 flex items-center justify-between text-xs">
+              <span className="text-slate-400 text-[11px] flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-[#2e86ff]" />
+                Geographic Presence:
               </span>
-              <p className="text-rose-100">{activeSpecies.first_aid}</p>
-              <div className="p-2.5 rounded-lg bg-black/40 border border-rose-900/40 text-[11px] text-rose-200">
-                <strong>When to Seek Emergency Care:</strong> {activeSpecies.when_to_call_emergency}
+              <div className="flex flex-wrap gap-1">
+                {activeSpecies.regions.map((reg) => (
+                  <span key={reg} className="px-2 py-0.5 rounded bg-[#28284c] text-purple-200 font-mono text-[10px] font-bold">
+                    {reg}
+                  </span>
+                ))}
               </div>
             </div>
 
-            {/* Fun Fact */}
-            <div className="p-3.5 rounded-xl sm:rounded-2xl bg-purple-950/40 border border-purple-900/50 text-xs text-purple-200">
-              <strong className="text-purple-300">Entomology Insight: </strong>
-              {activeSpecies.fun_fact}
+            {/* Description & Biological Profile */}
+            <div className="space-y-2">
+              <h4 className="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-2 text-slate-300">
+                <Info className="w-4 h-4 text-[#2e86ff]" />
+                <span>Species Description &amp; Behavioral Profile</span>
+              </h4>
+              <div className="p-4 rounded-xl bg-[#141426] border border-slate-800 text-xs sm:text-sm text-slate-300 leading-relaxed">
+                {activeSpecies.description}
+              </div>
             </div>
+
+            {/* Habitat */}
+            <div className="p-3.5 rounded-xl bg-[#141424] border border-slate-800 space-y-1 text-xs">
+              <span className="font-semibold text-slate-300 block">Typical Habitat &amp; Environment:</span>
+              <p className="text-slate-400 leading-relaxed">{activeSpecies.habitat}</p>
+            </div>
+
+            {/* First Aid & Emergency Guidance */}
+            <div className="p-4 rounded-xl sm:rounded-2xl bg-rose-950/40 border border-rose-900/60 space-y-3 text-xs">
+              <div className="space-y-1">
+                <span className="font-bold text-rose-300 flex items-center gap-1.5">
+                  <HeartPulse className="w-4 h-4 text-rose-400" />
+                  Clinical First Aid Protocol:
+                </span>
+                <p className="text-rose-100 leading-relaxed">{activeSpecies.first_aid}</p>
+              </div>
+
+              <div className="p-3 rounded-lg bg-black/40 border border-rose-900/40 text-[11px] text-rose-200 space-y-1">
+                <strong className="text-rose-300 block flex items-center gap-1">
+                  <Skull className="w-3.5 h-3.5 text-rose-400" />
+                  When to Seek Immediate Emergency Medical Care:
+                </strong>
+                <p>{activeSpecies.when_to_call_emergency}</p>
+              </div>
+            </div>
+
+            {/* Lookalikes if available */}
+            {activeSpecies.look_alikes && activeSpecies.look_alikes.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="font-bold text-xs uppercase text-amber-400 tracking-wider flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span>Common Lookalike Species</span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {activeSpecies.look_alikes.map((lk, idx) => (
+                    <div key={idx} className="p-2.5 rounded-xl bg-[#141424] border border-slate-800 text-slate-300">
+                      <span className="font-bold text-white block">{lk}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Fun Fact / Entomology Insight */}
+            {activeSpecies.fun_fact && (
+              <div className="p-3.5 rounded-xl sm:rounded-2xl bg-purple-950/40 border border-purple-900/50 text-xs text-purple-200">
+                <strong className="text-purple-300">Entomology Insight: </strong>
+                {activeSpecies.fun_fact}
+              </div>
+            )}
 
             <button
               onClick={() => setActiveSpecies(null)}

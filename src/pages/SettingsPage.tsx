@@ -35,6 +35,10 @@ export const SettingsPage: React.FC<{ onNavigate: (tab: string) => void }> = ({ 
   const [billingMessage, setBillingMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showInstallModal, setShowInstallModal] = useState(false);
 
+  useEffect(() => {
+    refreshUser();
+  }, []);
+
   // 48h Countdown Timer Calculation
   const [timeLeft48h, setTimeLeft48h] = useState<{
     hours: number;

@@ -86,6 +86,7 @@ export interface JournalEntryDoc {
   };
   notes?: string;
   status: 'found' | 'observed' | 'reported' | 'photographed';
+  scan_result?: ScanResult;
 }
 
 export interface AlertDoc {

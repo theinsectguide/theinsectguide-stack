@@ -36,6 +36,7 @@ import {
   requireAdmin,
   optionalAuth,
   seedAdminUser,
+  seedDemoUser,
   checkLoginAttempts,
   recordFailedLoginAttempt,
   recordSuccessfulLogin,
@@ -56,6 +57,7 @@ import {
   handleRequestRefund,
   handlePayPalWebhook,
 } from './server/paypal';
+import { UserDoc } from './server/types';
 
 const app = express();
 const PORT = 3000;
@@ -71,8 +73,33 @@ app.get('/api/health', (req: Request, res: Response) => {
 });
 
 // ----------------------------------------------------
-// AUTHENTICATION ROUTES
+// AUTHENTICATION ROUTES & HELPERS
 // ----------------------------------------------------
+async function getUserProfileWithStats(user: UserDoc) {
+  const userScans = await getScansByUserId(user._id);
+  const userJournals = await getJournalEntriesByUserId(user._id);
+  const uniqueSpecies = new Set(
+    userJournals.map(j => (j.insect_name || j.scan_result?.common_name || '').trim().toLowerCase()).filter(Boolean)
+  );
+
+  return {
+    id: user._id,
+    email: user.email,
+    name: user.name,
+    region: user.region,
+    level: user.level,
+    tier: user.tier,
+    role: user.role,
+    subscription_status: user.subscription_status,
+    subscription_plan: user.subscription_plan,
+    subscription_start: user.subscription_start,
+    last_payment_date: user.last_payment_date,
+    scans_count: userScans.length,
+    species_found: uniqueSpecies.size,
+    refund_requested: user.refund_requested,
+  };
+}
+
 app.post('/api/auth/register', async (req: Request, res: Response) => {
   try {
     const { name, email, password, region, level } = req.body;
@@ -121,18 +148,10 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
     sendWelcomeEmail(newUser).catch(err => console.warn('Welcome email non-fatal error:', err));
 
     const token = generateToken(newUser);
+    const profile = await getUserProfileWithStats(newUser);
     return res.status(201).json({
       token,
-      user: {
-        id: newUser._id,
-        email: newUser.email,
-        name: newUser.name,
-        region: newUser.region,
-        level: newUser.level,
-        tier: newUser.tier,
-        role: newUser.role,
-        subscription_status: newUser.subscription_status,
-      },
+      user: profile,
     });
   } catch (err: any) {
     console.error('Registration error:', err);
@@ -178,23 +197,10 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
     recordSuccessfulLogin(cleanEmail);
 
     const token = generateToken(user);
+    const profile = await getUserProfileWithStats(user);
     return res.json({
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        region: user.region,
-        level: user.level,
-        tier: user.tier,
-        role: user.role,
-        subscription_status: user.subscription_status,
-        subscription_plan: user.subscription_plan,
-        subscription_start: user.subscription_start,
-        last_payment_date: user.last_payment_date,
-        scans_count: user.scans_count,
-        species_found: user.species_found,
-      },
+      user: profile,
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -236,15 +242,10 @@ app.post('/api/auth/admin-login', async (req: Request, res: Response) => {
     recordSuccessfulLogin(`admin_${cleanEmail}`);
 
     const token = generateToken(user);
+    const profile = await getUserProfileWithStats(user);
     return res.json({
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        role: 'admin',
-        tier: 'pro',
-      },
+      user: profile,
     });
   } catch (err) {
     return res.status(500).json({ error: 'Admin authentication failed.' });
@@ -253,23 +254,9 @@ app.post('/api/auth/admin-login', async (req: Request, res: Response) => {
 
 app.get('/api/auth/me', requireAuth, async (req: AuthRequest, res: Response) => {
   const user = req.user!;
+  const profile = await getUserProfileWithStats(user);
   return res.json({
-    user: {
-      id: user._id,
-      email: user.email,
-      name: user.name,
-      region: user.region,
-      level: user.level,
-      tier: user.tier,
-      role: user.role,
-      subscription_status: user.subscription_status,
-      subscription_plan: user.subscription_plan,
-      subscription_start: user.subscription_start,
-      last_payment_date: user.last_payment_date,
-      scans_count: user.scans_count || 0,
-      species_found: user.species_found || 0,
-      refund_requested: user.refund_requested,
-    },
+    user: profile,
   });
 });
 
@@ -426,6 +413,7 @@ app.post('/api/scans/:id/save-to-journal', requirePro, async (req: AuthRequest, 
       location: location || scan.location,
       notes: notes || scan.notes || 'Saved from AI identification scan.',
       status: ['found', 'observed', 'reported', 'photographed'].includes(status) ? status : 'found',
+      scan_result: scan.result,
     });
 
     return res.json({ success: true, entry: journal });
@@ -440,7 +428,18 @@ app.post('/api/scans/:id/save-to-journal', requirePro, async (req: AuthRequest, 
 app.get('/api/journal', requirePro, async (req: AuthRequest, res: Response) => {
   try {
     const entries = await getJournalEntriesByUserId(req.user!._id);
-    return res.json({ entries });
+    const enriched = await Promise.all(
+      entries.map(async (entry) => {
+        if (!entry.scan_result && entry.scan_id) {
+          const scan = await getScanById(entry.scan_id);
+          if (scan?.result) {
+            return { ...entry, scan_result: scan.result };
+          }
+        }
+        return entry;
+      })
+    );
+    return res.json({ entries: enriched });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to retrieve journal entries.' });
   }
@@ -449,7 +448,7 @@ app.get('/api/journal', requirePro, async (req: AuthRequest, res: Response) => {
 app.post('/api/journal', requirePro, async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
-    const { photo_url, insect_name, latin_name, danger_level, status_type, location, notes, status } = req.body;
+    const { photo_url, insect_name, latin_name, danger_level, status_type, location, notes, status, scan_result } = req.body;
 
     if (!insect_name || !photo_url) {
       return res.status(400).json({ error: 'Insect name and photo are required.' });
@@ -466,6 +465,7 @@ app.post('/api/journal', requirePro, async (req: AuthRequest, res: Response) => 
       location,
       notes,
       status: status || 'found',
+      scan_result,
     });
 
     return res.status(201).json({ success: true, entry });
@@ -923,6 +923,7 @@ function startWeeklyAlertScheduler() {
 async function start() {
   await initDB();
   await seedAdminUser();
+  await seedDemoUser();
   startWeeklyAlertScheduler();
 
   if (process.env.NODE_ENV !== 'production') {
