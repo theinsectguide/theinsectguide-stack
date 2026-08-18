@@ -126,3 +126,18 @@ export interface SpeciesEntry {
     danger_summary: string;
   }[];
 }
+
+export interface TransactionDoc {
+  _id: string;
+  user_id: string;
+  order_id: string;
+  capture_id: string;
+  payer_email?: string;
+  payer_id?: string;
+  amount: string;
+  currency: string;
+  plan: 'monthly' | 'annual';
+  status: 'COMPLETED' | 'PENDING' | 'FAILED' | 'REFUNDED';
+  created_at: string;
+  raw_details?: any;
+}

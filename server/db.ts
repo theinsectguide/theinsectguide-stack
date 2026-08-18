@@ -1,5 +1,5 @@
 import { MongoClient, Db, ObjectId } from 'mongodb';
-import { UserDoc, ScanDoc, JournalEntryDoc, AlertDoc, SpeciesEntry } from './types';
+import { UserDoc, ScanDoc, JournalEntryDoc, AlertDoc, SpeciesEntry, TransactionDoc } from './types';
 import fs from 'fs';
 import path from 'path';
 
@@ -13,38 +13,50 @@ const memoryStore = {
   scans: new Map<string, ScanDoc>(),
   journal_entries: new Map<string, JournalEntryDoc>(),
   alerts: new Map<string, AlertDoc>(),
+  transactions: new Map<string, TransactionDoc>(),
   push_subscriptions: new Map<string, any>(),
 };
 
-// Local storage fallback sync
-const DATA_FILE = path.join(process.cwd(), '.data_store.json');
+// Strict durable disk persistence files
+const PRIMARY_DATA_FILE = path.join(process.cwd(), 'database_store.json');
+const LEGACY_DATA_FILE = path.join(process.cwd(), '.data_store.json');
 
 function loadLocalStore() {
   try {
-    if (fs.existsSync(DATA_FILE)) {
-      const raw = fs.readFileSync(DATA_FILE, 'utf-8');
+    let raw: string | null = null;
+    if (fs.existsSync(PRIMARY_DATA_FILE)) {
+      raw = fs.readFileSync(PRIMARY_DATA_FILE, 'utf-8');
+    } else if (fs.existsSync(LEGACY_DATA_FILE)) {
+      raw = fs.readFileSync(LEGACY_DATA_FILE, 'utf-8');
+    }
+
+    if (raw) {
       const data = JSON.parse(raw);
       if (data.users) Object.entries(data.users).forEach(([k, v]) => memoryStore.users.set(k, v as UserDoc));
       if (data.scans) Object.entries(data.scans).forEach(([k, v]) => memoryStore.scans.set(k, v as ScanDoc));
       if (data.journal_entries) Object.entries(data.journal_entries).forEach(([k, v]) => memoryStore.journal_entries.set(k, v as JournalEntryDoc));
       if (data.alerts) Object.entries(data.alerts).forEach(([k, v]) => memoryStore.alerts.set(k, v as AlertDoc));
+      if (data.transactions) Object.entries(data.transactions).forEach(([k, v]) => memoryStore.transactions.set(k, v as TransactionDoc));
+      console.log(`[Database Persistence] Loaded ${memoryStore.users.size} users, ${memoryStore.scans.size} scans, ${memoryStore.journal_entries.size} journals from disk storage.`);
     }
   } catch (err) {
-    console.warn('Could not load local store cache, using memory:', err);
+    console.error('[Database Persistence] Error loading store cache from disk:', err);
   }
 }
 
-function saveLocalStore() {
+export function saveLocalStore() {
   try {
     const data = {
       users: Object.fromEntries(memoryStore.users),
       scans: Object.fromEntries(memoryStore.scans),
       journal_entries: Object.fromEntries(memoryStore.journal_entries),
       alerts: Object.fromEntries(memoryStore.alerts),
+      transactions: Object.fromEntries(memoryStore.transactions),
+      last_persisted_at: new Date().toISOString(),
     };
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    fs.writeFileSync(PRIMARY_DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
   } catch (err) {
-    // Non-blocking
+    console.error('[Database Persistence] Error writing database_store.json to disk:', err);
   }
 }
 
@@ -427,4 +439,41 @@ export async function savePushSubscription(userId: string, subscription: any) {
       { upsert: true }
     );
   }
+}
+
+// ----------------------------------------------------
+// TRANSACTION LOGGING METHODS
+// ----------------------------------------------------
+export async function createTransaction(tx: Omit<TransactionDoc, '_id'>): Promise<TransactionDoc> {
+  const newId = new ObjectId().toString();
+  const doc: TransactionDoc = {
+    ...tx,
+    _id: newId,
+  };
+
+  if (isConnectedToMongo && mongoDb) {
+    await mongoDb.collection('transactions').insertOne({ ...doc, _id: new ObjectId(newId) as any });
+  }
+  memoryStore.transactions.set(newId, doc);
+  saveLocalStore();
+  return doc;
+}
+
+export async function getTransactionsByUserId(userId: string): Promise<TransactionDoc[]> {
+  if (isConnectedToMongo && mongoDb) {
+    const txs = await mongoDb.collection('transactions').find({ user_id: userId }).sort({ created_at: -1 }).toArray();
+    return txs.map(t => ({ ...t, _id: t._id.toString() } as unknown as TransactionDoc));
+  }
+  return Array.from(memoryStore.transactions.values())
+    .filter(t => t.user_id === userId)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
+export async function getAllTransactions(): Promise<TransactionDoc[]> {
+  if (isConnectedToMongo && mongoDb) {
+    const txs = await mongoDb.collection('transactions').find().sort({ created_at: -1 }).toArray();
+    return txs.map(t => ({ ...t, _id: t._id.toString() } as unknown as TransactionDoc));
+  }
+  return Array.from(memoryStore.transactions.values())
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }

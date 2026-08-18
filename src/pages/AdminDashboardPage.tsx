@@ -26,6 +26,7 @@ export const AdminDashboardPage: React.FC<{ onNavigate: (tab: string) => void }>
   const { token, isAdmin } = useAuth();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userSearch, setUserSearch] = useState('');
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
@@ -36,9 +37,10 @@ export const AdminDashboardPage: React.FC<{ onNavigate: (tab: string) => void }>
     if (!token || !isAdmin) return;
     setLoading(true);
     try {
-      const [statsRes, usersRes] = await Promise.all([
+      const [statsRes, usersRes, txRes] = await Promise.all([
         fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } }),
         fetch('/api/admin/users', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/admin/transactions', { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
       if (statsRes.ok) {
@@ -49,6 +51,11 @@ export const AdminDashboardPage: React.FC<{ onNavigate: (tab: string) => void }>
       if (usersRes.ok) {
         const usersData = await usersRes.json();
         setUsers(usersData.users || []);
+      }
+
+      if (txRes.ok) {
+        const txData = await txRes.json();
+        setTransactions(txData.transactions || []);
       }
     } catch (err) {
       console.warn('Admin fetch error:', err);
@@ -625,6 +632,82 @@ export const AdminDashboardPage: React.FC<{ onNavigate: (tab: string) => void }>
               {filteredUsers.length === 0 && (
                 <div className="py-8 text-center text-slate-500 text-xs">
                   No users found matching your search query.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* VERIFIED PAYPAL TRANSACTIONS AUDIT LOG */}
+          <div className="p-6 rounded-3xl bg-[#1c1c34] border border-[#2e2e50] space-y-4 shadow-xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-display font-bold text-base text-white flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-emerald-400" />
+                  Verified PayPal Transactions ({transactions.length})
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Real captured PayPal orders logged securely in the persistent database.
+                </p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-400">
+                    <th className="pb-3 font-semibold">Date & Time</th>
+                    <th className="pb-3 font-semibold">Order ID / Capture ID</th>
+                    <th className="pb-3 font-semibold">Payer Email</th>
+                    <th className="pb-3 font-semibold">Plan</th>
+                    <th className="pb-3 font-semibold">Amount</th>
+                    <th className="pb-3 font-semibold text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {transactions.map((tx, idx) => (
+                    <tr key={tx._id || idx} className="hover:bg-[#242444]/40 transition-colors">
+                      <td className="py-3 text-slate-300 font-mono text-[11px]">
+                        {new Date(tx.created_at).toLocaleString()}
+                      </td>
+                      <td className="py-3 pr-2">
+                        <div className="font-mono text-white text-[11px]">{tx.order_id}</div>
+                        <div className="font-mono text-[10px] text-slate-500">{tx.capture_id}</div>
+                      </td>
+                      <td className="py-3 pr-2 text-slate-300 font-mono text-[11px]">
+                        {tx.payer_email || '—'}
+                      </td>
+                      <td className="py-3 pr-2">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                          {tx.plan}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-2 font-bold text-emerald-400 font-mono">
+                        ${tx.amount} {tx.currency}
+                      </td>
+                      <td className="py-3 text-right">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                            tx.status === 'COMPLETED'
+                              ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40'
+                              : 'bg-rose-950 text-rose-300 border border-rose-500/40'
+                          }`}
+                        >
+                          {tx.status === 'COMPLETED' ? (
+                            <CheckCircle className="w-3 h-3 text-emerald-400" />
+                          ) : (
+                            <AlertOctagon className="w-3 h-3 text-rose-400" />
+                          )}
+                          {tx.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {transactions.length === 0 && (
+                <div className="py-8 text-center text-slate-500 text-xs">
+                  No verified PayPal transactions recorded yet.
                 </div>
               )}
             </div>

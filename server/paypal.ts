@@ -1,6 +1,6 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { AuthRequest } from './auth';
-import { updateUser, findUserById } from './db';
+import { updateUser, findUserById, createTransaction } from './db';
 import {
   sendPaymentConfirmedEmail,
   sendCancellationEmail,
@@ -8,17 +8,30 @@ import {
   addOrUpdateBrevoContact,
 } from './email';
 
-// PayPal Configuration (LIVE Mode)
-const PAYPAL_MODE = process.env.PAYPAL_MODE || 'live';
-const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || 'AffnRM3aLTLlYUT538UDsDxpM4MqrBrrCt-2Ihl9L4TDKgVLsmiTjE8qdmO-CrHi7HqgS6fOnlQOmmYV';
-const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || 'EAkJG726rN_7QJrQllDhVDQqy_V7RmJPE3A5EYVx5i_a4hWn7QhIyL6lKaX-AaZ_V9i4qfgS5oM7bjK3';
-const PAYPAL_WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID || '2A319232KL071003J';
+// PayPal Configuration
+export const PAYPAL_MODE = process.env.PAYPAL_MODE || 'live';
+export const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || 'AffnRM3aLTLlYUT538UDsDxpM4MqrBrrCt-2Ihl9L4TDKgVLsmiTjE8qdmO-CrHi7HqgS6fOnlQOmmYV';
+export const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || 'EAkJG726rN_7QJrQllDhVDQqy_V7RmJPE3A5EYVx5i_a4hWn7QhIyL6lKaX-AaZ_V9i4qfgS5oM7bjK3';
+export const PAYPAL_WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID || '2A319232KL071003J';
 
-// Live PayPal API URL: https://api-m.paypal.com
-export const PAYPAL_API_BASE = 'https://api-m.paypal.com';
+// Live / Sandbox PayPal REST API base URL
+export const PAYPAL_API_BASE = PAYPAL_MODE === 'sandbox'
+  ? 'https://api-m.sandbox.paypal.com'
+  : 'https://api-m.paypal.com';
 
 /**
- * Fetch OAuth2 Access Token from PayPal Live API
+ * Expose client configuration to frontend
+ */
+export async function getPayPalConfig(req: Request, res: Response) {
+  return res.json({
+    clientId: PAYPAL_CLIENT_ID,
+    currency: 'USD',
+    mode: PAYPAL_MODE,
+  });
+}
+
+/**
+ * Fetch OAuth2 Access Token from PayPal REST API
  */
 export async function getPayPalAccessToken(): Promise<string | null> {
   try {
@@ -34,56 +47,181 @@ export async function getPayPalAccessToken(): Promise<string | null> {
 
     if (!res.ok) {
       const err = await res.text();
-      console.error(`[PayPal Live] Failed to get access token (${res.status}):`, err);
+      console.error(`[PayPal REST API] Failed to get access token (${res.status}):`, err);
       return null;
     }
 
     const data: any = await res.json();
     return data.access_token;
   } catch (err) {
-    console.error('[PayPal Live] Network error getting access token:', err);
+    console.error('[PayPal REST API] Network error obtaining access token:', err);
     return null;
   }
 }
 
 /**
- * Verify a PayPal subscription status directly with Live API
+ * CREATE PAYPAL ORDER (POST /v2/checkout/orders)
+ * Creates a verified server-side PayPal order with intent: 'CAPTURE'
  */
-export async function verifyPayPalSubscription(subscriptionId: string): Promise<any | null> {
+export async function handleCreatePayPalOrder(req: AuthRequest, res: Response) {
   try {
-    const token = await getPayPalAccessToken();
-    if (!token) return null;
+    const user = req.user!;
+    const { plan } = req.body; // 'monthly' ($4.99) or 'annual' ($29.99)
 
-    const res = await fetch(`${PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionId}`, {
+    const isAnnual = plan === 'annual';
+    const amountValue = isAnnual ? '29.99' : '4.99';
+    const planName = isAnnual
+      ? 'The Insect Guide - Annual Pro Membership (Save 50%)'
+      : 'The Insect Guide - Monthly Pro Membership';
+
+    const token = await getPayPalAccessToken();
+    if (!token) {
+      return res.status(500).json({ error: 'Failed to authenticate with PayPal API.' });
+    }
+
+    const orderPayload = {
+      intent: 'CAPTURE',
+      purchase_units: [
+        {
+          reference_id: `plan_${plan}_user_${user._id}`,
+          description: planName,
+          custom_id: user._id,
+          amount: {
+            currency_code: 'USD',
+            value: amountValue,
+            breakdown: {
+              item_total: {
+                currency_code: 'USD',
+                value: amountValue,
+              },
+            },
+          },
+          items: [
+            {
+              name: planName,
+              description: isAnnual
+                ? '1-Year Unlimited AI photo scans, venom assessments & triage'
+                : '1-Month Unlimited AI photo scans, venom assessments & triage',
+              unit_amount: {
+                currency_code: 'USD',
+                value: amountValue,
+              },
+              quantity: '1',
+              category: 'DIGITAL_GOODS',
+            },
+          ],
+        },
+      ],
+      application_context: {
+        brand_name: 'The Insect Guide',
+        landing_page: 'NO_PREFERENCE',
+        user_action: 'PAY_NOW',
+        return_url: 'https://theinsectguide.com/#scan',
+        cancel_url: 'https://theinsectguide.com/#pricing',
+      },
+    };
+
+    const response = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders`, {
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify(orderPayload),
     });
 
-    if (!res.ok) {
-      console.warn(`[PayPal Live] Failed to fetch subscription ${subscriptionId}:`, res.status);
-      return null;
+    const orderData: any = await response.json();
+    if (!response.ok) {
+      console.error('[PayPal API] Order creation error response:', orderData);
+      return res.status(response.status).json({
+        error: orderData.message || 'Failed to create PayPal order.',
+        details: orderData.details,
+      });
     }
 
-    return await res.json();
-  } catch (err) {
-    console.error(`[PayPal Live] Error verifying subscription ${subscriptionId}:`, err);
-    return null;
+    return res.status(200).json({
+      id: orderData.id,
+      orderID: orderData.id,
+      status: orderData.status,
+    });
+  } catch (err: any) {
+    console.error('[PayPal API] Exception creating order:', err);
+    return res.status(500).json({ error: 'Internal server error while creating PayPal order.' });
   }
 }
 
-export async function handleCreateSubscription(req: AuthRequest, res: Response) {
+/**
+ * CAPTURE & VERIFY PAYPAL ORDER (POST /v2/checkout/orders/{orderId}/capture)
+ * Strict validation: only upgrades account if PayPal status is STRICTLY 'COMPLETED'
+ */
+export async function handleCapturePayPalOrder(req: AuthRequest, res: Response) {
   try {
     const user = req.user!;
-    const { plan, subscription_id } = req.body; // 'monthly' ($4.99) or 'annual' ($29.99)
+    const { orderID, plan } = req.body;
 
-    const subId = subscription_id || `sub_live_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    if (!orderID) {
+      return res.status(400).json({ error: 'Missing required orderID for capture.' });
+    }
+
+    const token = await getPayPalAccessToken();
+    if (!token) {
+      return res.status(500).json({ error: 'Failed to authenticate with PayPal API for capture.' });
+    }
+
+    // Call PayPal REST Capture endpoint: POST /v2/checkout/orders/{orderId}/capture
+    const response = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders/${orderID}/capture`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    });
+
+    const captureData: any = await response.json();
+
+    // STRICT VERIFICATION OF CAPTURE STATUS
+    const orderStatus = captureData?.status;
+    const captureUnit = captureData?.purchase_units?.[0]?.payments?.captures?.[0];
+    const captureStatus = captureUnit?.status;
+    const captureId = captureUnit?.id || orderID;
+    const payerEmail = captureData?.payer?.email_address;
+    const payerId = captureData?.payer?.payer_id;
+    const amountVal = captureUnit?.amount?.value || (plan === 'annual' ? '29.99' : '4.99');
+    const currencyVal = captureUnit?.amount?.currency_code || 'USD';
+
+    const isCompleted = orderStatus === 'COMPLETED' || captureStatus === 'COMPLETED';
+
+    if (!response.ok || !isCompleted) {
+      console.warn(`[PayPal Security Check] Order ${orderID} capture rejected. Status: ${orderStatus}, CaptureStatus: ${captureStatus}`);
+      
+      // DO NOT GRANT PRO ACCESS
+      await createTransaction({
+        user_id: user._id,
+        order_id: orderID,
+        capture_id: captureId || 'FAILED',
+        payer_email: payerEmail,
+        payer_id: payerId,
+        amount: amountVal,
+        currency: currencyVal,
+        plan: plan === 'annual' ? 'annual' : 'monthly',
+        status: 'FAILED',
+        created_at: new Date().toISOString(),
+        raw_details: captureData,
+      });
+
+      return res.status(400).json({
+        error: 'PayPal payment was not completed or failed verification. Account remains on Free tier.',
+        status: orderStatus || 'FAILED',
+        details: captureData?.details || captureData?.message,
+      });
+    }
+
+    // PAYMENT IS STRICTLY COMPLETED -> Grant Pro tier & Record transaction
     const now = new Date().toISOString();
-
     const updated = await updateUser(user._id, {
       tier: 'pro',
-      subscription_id: subId,
+      subscription_id: captureId,
       subscription_status: 'active',
       subscription_plan: plan === 'annual' ? 'annual' : 'monthly',
       subscription_start: now,
@@ -91,21 +229,41 @@ export async function handleCreateSubscription(req: AuthRequest, res: Response) 
       refund_requested: false,
     });
 
+    // Record verified transaction in persistent database
+    await createTransaction({
+      user_id: user._id,
+      order_id: orderID,
+      capture_id: captureId,
+      payer_email: payerEmail,
+      payer_id: payerId,
+      amount: amountVal,
+      currency: currencyVal,
+      plan: plan === 'annual' ? 'annual' : 'monthly',
+      status: 'COMPLETED',
+      created_at: now,
+      raw_details: captureData,
+    });
+
     // Send confirmation email and sync contact
     const planName = plan === 'annual' ? 'Annual Pro ($29.99/yr)' : 'Monthly Pro ($4.99/mo)';
-    const amount = plan === 'annual' ? '$29.99' : '$4.99';
-    await sendPaymentConfirmedEmail(user, planName, amount);
+    const amountStr = `$${amountVal}`;
+    await sendPaymentConfirmedEmail(user, planName, amountStr).catch(err => console.warn('Payment email warning:', err));
     if (updated) {
       addOrUpdateBrevoContact(updated).catch(err => console.warn('Brevo contact update warning:', err));
     }
 
-    return res.json({
+    console.log(`[PayPal Success] User ${user.email} successfully upgraded to Pro via verified capture ${captureId}`);
+
+    return res.status(200).json({
       success: true,
-      mode: PAYPAL_MODE,
-      message: 'Subscription successfully activated via PayPal Live!',
+      status: 'COMPLETED',
+      orderID,
+      captureID: captureId,
+      message: 'Payment verified and Pro subscription activated successfully!',
       user: {
         id: updated?._id,
         email: updated?.email,
+        name: updated?.name,
         tier: updated?.tier,
         subscription_status: updated?.subscription_status,
         subscription_plan: updated?.subscription_plan,
@@ -114,8 +272,10 @@ export async function handleCreateSubscription(req: AuthRequest, res: Response) 
       },
     });
   } catch (err: any) {
-    console.error('[PayPal Live] Subscription creation error:', err);
-    return res.status(500).json({ error: 'Failed to process subscription activation.' });
+    console.error('[PayPal API] Exception during order capture:', err);
+    return res.status(500).json({
+      error: 'An error occurred while capturing and verifying your PayPal order.',
+    });
   }
 }
 

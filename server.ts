@@ -26,6 +26,8 @@ import {
   markAlertAsRead,
   savePushSubscription,
   createAlert,
+  getAllTransactions,
+  getTransactionsByUserId,
 } from './server/db';
 import {
   generateToken,
@@ -52,7 +54,9 @@ import {
 import { fetchRegionalInsectRisk } from './server/weather';
 import { ENCYCLOPEDIA_SPECIES, TOP_TEN_BY_COUNTRY } from './server/encyclopediaData';
 import {
-  handleCreateSubscription,
+  getPayPalConfig,
+  handleCreatePayPalOrder,
+  handleCapturePayPalOrder,
   handleCancelSubscription,
   handleRequestRefund,
   handlePayPalWebhook,
@@ -649,9 +653,11 @@ app.post('/api/alerts/push-subscribe', requireAuth, async (req: AuthRequest, res
 });
 
 // ----------------------------------------------------
-// PAYPAL SUBSCRIPTION & BILLING ROUTES
+// PAYPAL REST ORDER, CAPTURE, WEBHOOKS & BILLING ROUTES
 // ----------------------------------------------------
-app.post('/api/subscription/create', requireAuth, handleCreateSubscription);
+app.get('/api/paypal/config', getPayPalConfig);
+app.post('/api/paypal/create-order', requireAuth, handleCreatePayPalOrder);
+app.post('/api/paypal/capture-order', requireAuth, handleCapturePayPalOrder);
 app.post('/api/subscription/cancel', requireAuth, handleCancelSubscription);
 app.post('/api/subscription/refund', requireAuth, handleRequestRefund);
 app.post('/api/webhooks/paypal', handlePayPalWebhook);
@@ -838,6 +844,16 @@ app.delete('/api/admin/users/:id', requireAdmin, async (req: AuthRequest, res: R
     return res.json({ success: true, message: `User ${target.email} and all associated scans deleted.` });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to delete user.' });
+  }
+});
+
+// Admin get verified transactions list
+app.get('/api/admin/transactions', requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const transactions = await getAllTransactions();
+    return res.json({ transactions });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to retrieve transactions.' });
   }
 });
 
