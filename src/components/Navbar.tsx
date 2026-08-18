@@ -44,8 +44,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab }) => {
           className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group min-w-0"
         >
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-[#1a1a2e] via-[#2e86ff] to-[#10b981] p-0.5 shadow-lg group-hover:scale-105 transition-transform shrink-0">
-            <div className="w-full h-full bg-[#161628] rounded-[10px] flex items-center justify-center">
-              <Bug className="w-5 h-5 text-[#10b981] group-hover:text-[#2e86ff] transition-colors" />
+            <div className="w-full h-full bg-[#0c1022] rounded-[10px] flex items-center justify-center overflow-hidden">
+              <img src="/favicon.svg" alt="The Insect Guide" className="w-full h-full object-cover" />
             </div>
           </div>
           <div className="min-w-0">

@@ -30,8 +30,8 @@ export const Footer: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNav
           {/* Brand Col */}
           <div className="md:col-span-2 space-y-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#2e86ff] to-[#10b981] p-0.5 flex items-center justify-center">
-                <Bug className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#2e86ff] to-[#10b981] p-0.5 flex items-center justify-center overflow-hidden">
+                <img src="/favicon.svg" alt="The Insect Guide" className="w-full h-full object-cover rounded-[6px]" />
               </div>
               <span className="font-display font-bold text-lg text-white">The Insect Guide</span>
             </div>
