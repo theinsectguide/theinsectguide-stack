@@ -35,6 +35,7 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
   const { user, token, isPro, isAuthenticated, refreshUser } = useAuth();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
   const [currentScan, setCurrentScan] = useState<Scan | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -140,6 +141,14 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
     setIsLiveCameraOpen(false);
   };
 
+  const getScanProgressStage = (pct: number) => {
+    if (pct < 25) return 'Preparing image & morphological extraction...';
+    if (pct < 60) return 'Analyzing specimen with Claude Sonnet 4.5 Vision...';
+    if (pct < 85) return 'Evaluating venom apparatus, stinger morphology & taxonomy...';
+    if (pct < 100) return 'Computing deterministic threat score & safety protocols...';
+    return 'Analysis complete!';
+  };
+
   const handleScanImage = async () => {
     if (!selectedImage) return;
 
@@ -149,8 +158,20 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
     }
 
     setLoading(true);
+    setScanProgress(5);
     setErrorMsg(null);
     setSavedToJournal(false);
+
+    // Dynamic progress bar ticker
+    const progressInterval = setInterval(() => {
+      setScanProgress((prev) => {
+        if (prev < 30) return prev + Math.floor(Math.random() * 4) + 3;
+        if (prev < 65) return prev + Math.floor(Math.random() * 3) + 2;
+        if (prev < 88) return prev + Math.floor(Math.random() * 2) + 1;
+        if (prev < 96) return Math.min(96, prev + 0.6);
+        return prev;
+      });
+    }, 150);
 
     try {
       // Get GPS location if user permits
@@ -188,11 +209,18 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
         throw new Error(data.message || data.error || 'Failed to identify insect.');
       }
 
+      // Complete progress smoothly
+      clearInterval(progressInterval);
+      setScanProgress(100);
+      await new Promise((resolve) => setTimeout(resolve, 350));
+
       setCurrentScan(data.scan);
       await refreshUser();
     } catch (err: any) {
+      clearInterval(progressInterval);
       setErrorMsg(err.message || 'An error occurred during analysis.');
     } finally {
+      clearInterval(progressInterval);
       setLoading(false);
     }
   };
@@ -319,25 +347,53 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
               </button>
             </div>
 
-            {/* Scan trigger button */}
+            {/* Scan trigger button & Progress Bar */}
             {!currentScan && (
-              <button
-                onClick={handleScanImage}
-                disabled={loading}
-                className="w-full min-h-[48px] py-3.5 sm:py-4 rounded-xl bg-gradient-to-r from-[#e94560] via-[#f5a623] to-[#10b981] text-white font-display font-bold text-sm sm:text-base shadow-xl hover:brightness-110 active:scale-98 transition-all flex items-center justify-center gap-2.5 disabled:opacity-50"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Analyzing with Claude Vision...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-5 h-5" />
-                    <span>Identify Specimen &amp; Assess Danger</span>
-                  </>
+              <div className="space-y-3">
+                <button
+                  id="scan-analyze-button"
+                  onClick={handleScanImage}
+                  disabled={loading}
+                  className="w-full min-h-[48px] py-3.5 sm:py-4 rounded-xl bg-gradient-to-r from-[#e94560] via-[#f5a623] to-[#10b981] text-white font-display font-bold text-sm sm:text-base shadow-xl hover:brightness-110 active:scale-98 transition-all flex items-center justify-center gap-2.5 disabled:opacity-75 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin text-white" />
+                      <span>Analyzing with Claude Vision...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5" />
+                      <span>Identify Specimen &amp; Assess Danger</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Progress bar with percentage directly below the button */}
+                {loading && (
+                  <div
+                    id="scan-progress-bar-container"
+                    className="p-3.5 sm:p-4 rounded-xl bg-[#141426] border border-[#2e2e50] space-y-2.5 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200"
+                  >
+                    <div className="flex items-center justify-between text-xs sm:text-sm">
+                      <span className="font-medium text-slate-300 flex items-center gap-2 truncate pr-2">
+                        <Sparkles className="w-3.5 h-3.5 text-[#10b981] animate-pulse shrink-0" />
+                        <span className="truncate">{getScanProgressStage(scanProgress)}</span>
+                      </span>
+                      <span className="font-mono font-bold text-[#10b981] text-sm sm:text-base shrink-0">
+                        {Math.round(scanProgress)}%
+                      </span>
+                    </div>
+
+                    <div className="w-full h-3 bg-black/70 rounded-full overflow-hidden border border-slate-800 p-0.5 relative">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#e94560] via-[#f5a623] to-[#10b981] rounded-full transition-all duration-200 ease-out shadow-sm"
+                        style={{ width: `${Math.min(100, Math.max(3, scanProgress))}%` }}
+                      />
+                    </div>
+                  </div>
                 )}
-              </button>
+              </div>
             )}
           </div>
         )}

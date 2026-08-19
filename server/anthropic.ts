@@ -106,7 +106,7 @@ JSON RESPONSE SCHEMA (Strict JSON format only)
   "confidence": "HIGH" | "MEDIUM" | "LOW",
   "is_uncertain": false,
   "visual_evidence": [
-    "Large robust body (approx 25-35mm)",
+    "Large hornet body (typically around 25–35 mm for workers, with queens larger)",
     "Distinctive reddish-brown head and anterior thorax",
     "Yellow abdomen with dark teardrop-shaped spots along the lateral margin",
     "Smooth hairless metasoma and longitudinally folded wings"
@@ -128,9 +128,9 @@ JSON RESPONSE SCHEMA (Strict JSON format only)
   "pet_child_explanation": "Possesses a potent sting with repeat stinging capability. Keep curious pets and children at a safe distance.",
   "conservation_status": "Least Concern (IUCN)",
   "legal_protection_status": "Location dependent — Specially protected under national law in Germany (§44 BNatSchG), but not protected in the UK or North America.",
-  "description": "Comprehensive species description...",
+  "description": "European hornets are a large native social wasp species found across parts of Europe and established in eastern North America. Workers typically measure around 25–35 mm in length, with queens noticeably larger. They are characterized by a reddish-brown head and anterior thorax, paired with a yellow abdomen patterned with dark lateral spots. European hornets are effective natural predators of various insect species and nest primarily in sheltered tree hollows, cavities, and outbuildings.",
   "habitat": "Woodlands, hollow trees, attics, eaves, and garden outbuildings.",
-  "active_season": "May to October (Late Spring through Autumn)",
+  "active_season": "Spring to Autumn (Peak activity: Late spring through summer. Seasonal timing varies by region and climate.)",
   "geographic_regions": ["UK", "EU", "US"],
   "look_alikes": ["Asian Hornet (Vespa velutina)", "Common Yellowjacket (Vespula vulgaris)", "Cicada Killer"],
   "first_aid": "Wash sting site thoroughly with soap and water. Apply a cold ice compress for 15 minutes. Take oral antihistamine if needed. Do NOT scrape unless a stinger is visibly present.",
@@ -144,7 +144,7 @@ JSON RESPONSE SCHEMA (Strict JSON format only)
     "prevention": "Seal attic eaves and chimney soffit fissures.",
     "estimated_exterminator_cost": "$180 - $350"
   },
-  "interesting_facts": "European hornets have smooth stingers allowing them to sting repeatedly without dying, unlike honeybees."
+  "interesting_facts": "European hornets are effective predators of flies, caterpillars, grasshoppers and other insects. Unlike honeybees, they possess a smooth stinger that can be used repeatedly without dying."
 }
 
 Return ONLY the raw JSON object without markdown code fences or conversational commentary.`;

@@ -277,6 +277,30 @@ export const ENCYCLOPEDIA_SPECIES: SpeciesEntry[] = [
     look_alikes: ['Lesser Stag Beetle (Dorcus parallelipipedus)'],
     fun_fact: 'Stag beetle larvae spend up to 7 years underground feeding exclusively on decaying wood before emerging as adults for just a few weeks.',
     country_top_ten: []
+  },
+  {
+    id: 'vespa-crabro',
+    common_name: 'European Hornet',
+    latin_name: 'Vespa crabro',
+    category: 'Dangerous',
+    danger_level: 6,
+    can_sting: true,
+    can_bite: true,
+    dangerous_to_children: true,
+    dangerous_to_pets: true,
+    regions: ['UK', 'EU', 'US'],
+    active_seasons: ['Spring', 'Summer', 'Autumn'],
+    habitat: 'Deciduous woodlands, hollow tree cavities, sheltered eaves, attics, and garden outbuildings.',
+    description: 'European hornets are a large native social wasp species found across parts of Europe and established in eastern North America. Workers typically measure around 25–35 mm in length, with queens noticeably larger. They are characterized by a reddish-brown head and anterior thorax, paired with a yellow abdomen patterned with dark lateral spots. European hornets are effective natural predators of various insect species and nest primarily in sheltered cavities.',
+    first_aid: 'Wash sting site immediately with soap and water. Apply an ice pack wrapped in a cloth for 15 minutes. Take an over-the-counter antihistamine if swelling occurs. Do NOT attempt to scrape out a stinger unless visibly left behind.',
+    when_to_call_emergency: 'Call emergency services (999/911/112) immediately if stung in the mouth or throat, or if signs of anaphylaxis develop (wheezing, lip/tongue swelling, severe dizziness, full-body hives).',
+    photo_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Vespa_crabro_01.jpg/800px-Vespa_crabro_01.jpg',
+    look_alikes: ['Asian Hornet (Vespa velutina)', 'Common Yellowjacket (Vespula vulgaris)', 'Cicada Killer'],
+    fun_fact: 'European hornets are effective predators of flies, caterpillars, grasshoppers and other insects. Unlike honeybees, they possess a smooth stinger that can be used repeatedly without dying.',
+    country_top_ten: [
+      { country: 'UK', rank: 6, danger_summary: 'Deep venomous sting, defensive of nest cavities.' },
+      { country: 'EU', rank: 4, danger_summary: 'Potent sting with acetylcholine neurotransmitter component.' }
+    ]
   }
 ];
 
