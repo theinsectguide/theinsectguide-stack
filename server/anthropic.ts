@@ -645,7 +645,7 @@ export function sanitizeAndNormalizeResult(
       canStingRepeatedly = false;
       petChildHazard = 'Low';
       petChildExplanation =
-        'Docile keystone pollinator. Only stings in direct self-defense or when accidentally stepped on. Stings can trigger allergic reactions in sensitive individuals.';
+        'Docile keystone pollinator. Stings primarily in defense of the hive or when physically compressed, stepped on, or trapped. Stings can trigger allergic reactions in sensitive individuals.';
       firstAid =
         'Promptly scrape off the barbed stinger using a fingernail or flat plastic card without squeezing the venom sac. Wash area with cold water and soap, and apply an ice pack for 10-15 minutes.';
       emergencyGuidance =

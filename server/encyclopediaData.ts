@@ -19,7 +19,7 @@ export const ENCYCLOPEDIA_SPECIES: SpeciesEntry[] = [
     when_to_call_emergency: 'Call emergency services (999/112) immediately if throat swelling, dizziness, or breathing issues occur, or if stung in the head/neck area.',
     photo_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Vespa_crabro_01.jpg/800px-Vespa_crabro_01.jpg',
     look_alikes: ['European Hornet (Vespa crabro)', 'Giant Woodwasp (Urocerus gigas)'],
-    fun_fact: 'A single Asian hornet can catch and slaughter up to 50 honeybees per day to feed its brood.',
+    fun_fact: 'Asian hornets are specialized predators of honeybees, hovering outside hives to capture returning foragers and carry them back to nourish developing larvae.',
     country_top_ten: [
       { country: 'UK', rank: 2, danger_summary: 'Major ecological invasive threat with potent defensive venom.' },
       { country: 'EU', rank: 3, danger_summary: 'Rapidly spreading invasive hornet causing severe allergic hospitalizations.' }
@@ -43,7 +43,7 @@ export const ENCYCLOPEDIA_SPECIES: SpeciesEntry[] = [
     when_to_call_emergency: 'Immediate ambulance dispatch (000 in Australia). Venom can cause systemic neurotoxic collapse within 15 to 30 minutes if left untreated.',
     photo_url: 'https://images.unsplash.com/photo-1546842931-886c185b4c8c?auto=format&fit=crop&w=800&q=80',
     look_alikes: ['Mouse Spider (Missulena)', 'Trapdoor Spider (Idiopidae)'],
-    fun_fact: 'Since the development of antivenom in 1981, there have been zero recorded fatalities from Funnel-web spider bites in Australia.',
+    fun_fact: 'Specific antivenom is available and can be highly effective when administered promptly. Suspected Sydney Funnel-Web bites remain medical emergencies requiring urgent medical treatment.',
     country_top_ten: [
       { country: 'AU', rank: 1, danger_summary: 'World-renowned medical emergency; bites require immediate antivenom.' }
     ]
@@ -81,20 +81,18 @@ export const ENCYCLOPEDIA_SPECIES: SpeciesEntry[] = [
     can_bite: true,
     dangerous_to_children: true,
     dangerous_to_pets: true,
-    regions: ['US', 'CA', 'UK', 'EU'],
+    regions: ['US', 'CA'],
     active_seasons: ['Spring', 'Summer', 'Autumn'],
     habitat: 'Forest leaf litter, tall grass margins, nature trails, and coastal shrubs.',
-    description: 'Small dark-legged tick infamous as the primary vector transmitting Lyme disease spirochetes (Borrelia burgdorferi), Babesiosis, and Powassan virus.',
+    description: 'Ixodes scapularis is a North American tick found primarily in eastern and central parts of the United States and southern Canada. It is an important vector of Lyme disease and can transmit other pathogens including those responsible for babesiosis and Powassan virus. In Europe, the related Castor Bean Tick, Ixodes ricinus, is an important vector of Lyme borreliosis.',
     first_aid: 'Grasp tick close to the skin with fine-point tweezers. Pull straight out firmly without twisting. Disinfect bite site with rubbing alcohol. Note the date of removal.',
     when_to_call_emergency: 'Contact physician promptly if an expanding circular rash (Erythema migrans), fever, facial palsy, or joint inflammation emerges in subsequent weeks.',
     photo_url: 'https://images.unsplash.com/photo-1596704017254-9b121068fb31?auto=format&fit=crop&w=800&q=80',
     look_alikes: ['American Dog Tick (Dermacentor variabilis)', 'Lone Star Tick'],
     fun_fact: 'Tick nymphs are as tiny as a poppy seed (1-2mm), making them easy to overlook without meticulous full-body inspections.',
     country_top_ten: [
-      { country: 'US', rank: 1, danger_summary: 'Responsible for >400,000 estimated Lyme disease infections each year.' },
-      { country: 'CA', rank: 1, danger_summary: 'Leading insect vector for neurological and arthritic Lyme complications.' },
-      { country: 'UK', rank: 1, danger_summary: 'Primary UK vector for Lyme borreliosis in rural parks and Scottish Highlands.' },
-      { country: 'EU', rank: 1, danger_summary: 'Transmits both Lyme Disease and Tick-Borne Encephalitis (TBE).' }
+      { country: 'US', rank: 1, danger_summary: 'Major tick vector transmitting Lyme disease, Anaplasmosis, and Powassan virus.' },
+      { country: 'CA', rank: 1, danger_summary: 'Leading tick vector for Lyme complications across southern Canada.' }
     ]
   },
   {
@@ -140,7 +138,7 @@ export const ENCYCLOPEDIA_SPECIES: SpeciesEntry[] = [
     look_alikes: ['Native Harvester Ant', 'Carpenter Ant'],
     fun_fact: 'Fire ants can bind together during flash floods to form a living waterproof floating raft with their queen safely inside.',
     country_top_ten: [
-      { country: 'US', rank: 4, danger_summary: 'Stings over 5 million people annually in the southern United States.' },
+      { country: 'US', rank: 4, danger_summary: 'Red Imported Fire Ants can cause widespread painful stings and envenomation reactions in areas where established colonies occur, particularly across parts of the southern United States.' },
       { country: 'AU', rank: 4, danger_summary: 'High biosecurity priority eradication target in Queensland.' }
     ]
   },
@@ -185,7 +183,7 @@ export const ENCYCLOPEDIA_SPECIES: SpeciesEntry[] = [
     when_to_call_emergency: 'Consult doctor if high fever, severe joint pain, muscle aches, or rash develop within 3 to 14 days after exposure in endemic zones.',
     photo_url: 'https://images.unsplash.com/photo-1549490349-8643362247b5?auto=format&fit=crop&w=800&q=80',
     look_alikes: ['Yellow Fever Mosquito (Aedes aegypti)', 'Common House Mosquito (Culex)'],
-    fun_fact: 'Female Asian Tiger mosquitoes only require a few milliliters of standing water inside a bottle cap to lay viable eggs.',
+    fun_fact: 'Female Asian Tiger mosquitoes can successfully lay eggs in very small amounts of standing water, including plant saucers, discarded containers, clogged gutters, and tree hollows.',
     country_top_ten: [
       { country: 'US', rank: 3, danger_summary: 'Major urban disease vector spreading northward due to warming climate.' },
       { country: 'EU', rank: 2, danger_summary: 'Responsible for localized Dengue and Chikungunya outbreaks in Southern and Western Europe.' }
@@ -228,12 +226,12 @@ export const ENCYCLOPEDIA_SPECIES: SpeciesEntry[] = [
     regions: ['UK', 'US', 'CA', 'AU', 'EU'],
     active_seasons: ['Spring', 'Summer', 'Autumn'],
     habitat: 'Gardens, agricultural orchards, meadows, and managed apiaries.',
-    description: 'Indispensable pollinator insect characterized by fuzzy amber-brown coloration and pollen baskets on hind legs. Stings only in defense of the colony.',
+    description: 'Indispensable pollinator insect characterized by fuzzy amber-brown coloration and pollen baskets on hind legs. Stings primarily in defense of the hive or when physically compressed, stepped on, or trapped.',
     first_aid: 'Scrape stinger off immediately with a flat card. Wash with soap and water, then ice.',
     when_to_call_emergency: 'Seek urgent emergency medical care if systemic allergic symptoms, breathing difficulties, or swelling of the airway develop.',
     photo_url: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&w=800&q=80',
     look_alikes: ['Mason Bee', 'Mining Bee', 'Syrphid Fly'],
-    fun_fact: 'Honeybees produce royal jelly, propolis, and beeswax in addition to honey, pollinating 1 out of every 3 bites of human food.',
+    fun_fact: 'Honeybees produce royal jelly, propolis, and beeswax in addition to honey, and serve as important agricultural pollinators for numerous fruit, vegetable, nut, and seed crops worldwide.',
     country_top_ten: []
   },
   {
@@ -250,7 +248,7 @@ export const ENCYCLOPEDIA_SPECIES: SpeciesEntry[] = [
     active_seasons: ['Spring', 'Summer', 'Autumn'],
     habitat: 'Gardens, parks, crop fields, and rose bushes.',
     description: 'Classic beneficial beetle with bright scarlet wing cases and seven distinctive black dots. Natural biocontrol predator of agricultural aphids.',
-    first_aid: 'Harmless to humans and pets. No treatment needed.',
+    first_aid: 'Non-venomous and non-stinging, lacking a venom-delivery apparatus. No specific medical treatment is generally required.',
     when_to_call_emergency: 'None.',
     photo_url: 'https://images.unsplash.com/photo-1535083783855-76ae62b2914e?auto=format&fit=crop&w=800&q=80',
     look_alikes: ['Harlequin Ladybird (Harmonia axyridis)', 'Two-spotted Ladybird'],
@@ -270,12 +268,12 @@ export const ENCYCLOPEDIA_SPECIES: SpeciesEntry[] = [
     regions: ['UK', 'EU'],
     active_seasons: ['Summer'],
     habitat: 'Ancient oak woodlands, suburban gardens with rotting tree stumps, and parks.',
-    description: 'The largest terrestrial insect in the UK and Europe. Males possess magnificent antler-like mandibles used for wrestling rival males over mates.',
+    description: 'One of the largest terrestrial beetles in Europe and the United Kingdom. Males possess magnificent antler-like mandibles used for wrestling rival males over mates.',
     first_aid: 'Bite from male mandibles is very weak; female can deliver a brief pinch. Wash skin if pinched.',
     when_to_call_emergency: 'None.',
     photo_url: 'https://images.unsplash.com/photo-1618828665011-0abd973f7bb8?auto=format&fit=crop&w=800&q=80',
     look_alikes: ['Lesser Stag Beetle (Dorcus parallelipipedus)'],
-    fun_fact: 'Stag beetle larvae spend up to 7 years underground feeding exclusively on decaying wood before emerging as adults for just a few weeks.',
+    fun_fact: 'Stag beetle larvae develop underground for multiple years, feeding on decaying subterranean hardwood before emerging as adults for the summer breeding season.',
     country_top_ten: []
   },
   {
@@ -306,7 +304,7 @@ export const ENCYCLOPEDIA_SPECIES: SpeciesEntry[] = [
 
 export const TOP_TEN_BY_COUNTRY: Record<string, { rank: number; name: string; latin: string; danger: string; level: number }[]> = {
   UK: [
-    { rank: 1, name: 'Deer Tick (Blacklegged Tick)', latin: 'Ixodes scapularis', danger: 'Transmits debilitating Lyme disease spirochetes.', level: 8 },
+    { rank: 1, name: 'Castor Bean Tick (Sheep Tick)', latin: 'Ixodes ricinus', danger: 'Primary UK vector for Lyme borreliosis in rural parks and Scottish Highlands.', level: 8 },
     { rank: 2, name: 'Asian Hornet', latin: 'Vespa velutina', danger: 'Invasive predator with intense envenomation risk.', level: 8 },
     { rank: 3, name: 'Horsefly (Cleg)', latin: 'Tabanidae', danger: 'Slices flesh with scissor mandibles, high bacterial infection risk.', level: 6 },
     { rank: 4, name: 'Common Yellowjacket Wasp', latin: 'Vespula vulgaris', danger: 'Multiple aggressive stings, common source of anaphylaxis.', level: 7 },
