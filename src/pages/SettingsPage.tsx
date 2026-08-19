@@ -21,7 +21,7 @@ import {
   Download,
 } from 'lucide-react';
 
-export const SettingsPage: React.FC<{ onNavigate: (tab: string) => void }> = ({ onNavigate }) => {
+export const SettingsPage: React.FC<{ onNavigate: (tab: string) => void; onGoBack?: () => void }> = ({ onNavigate, onGoBack }) => {
   const { user, token, logout, updateProfile, refreshUser, isPro } = useAuth();
   const [name, setName] = useState(user?.name || '');
   const [region, setRegion] = useState(user?.region || 'UK');

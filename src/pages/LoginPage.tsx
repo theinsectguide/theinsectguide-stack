@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Bug, ArrowRight, Loader2, Lock, Shield } from 'lucide-react';
+import { Bug, ArrowRight, Loader2, Lock, Shield, ArrowLeft } from 'lucide-react';
 
 interface LoginPageProps {
   onNavigate: (tab: string) => void;
+  onGoBack?: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onGoBack }) => {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -41,7 +42,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 py-8 md:py-16">
+    <div className="max-w-md mx-auto px-4 py-6 md:py-16 space-y-4">
+      {onGoBack && (
+        <div>
+          <button
+            onClick={onGoBack}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#242446]/80 hover:bg-[#2e2e56] border border-slate-700/80 text-xs text-slate-300 hover:text-white font-semibold transition-all active:scale-95 group"
+          >
+            <ArrowLeft className="w-4 h-4 text-[#10b981] group-hover:-translate-x-0.5 transition-transform" />
+            <span>Back</span>
+          </button>
+        </div>
+      )}
+
       <div className="rounded-3xl bg-[#1c1c34] border border-[#2e2e50] p-6 sm:p-8 shadow-2xl space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">

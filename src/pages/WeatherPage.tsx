@@ -17,9 +17,10 @@ import {
 
 interface WeatherPageProps {
   onNavigate: (tab: string) => void;
+  onGoBack?: () => void;
 }
 
-export const WeatherPage: React.FC<WeatherPageProps> = ({ onNavigate }) => {
+export const WeatherPage: React.FC<WeatherPageProps> = ({ onNavigate, onGoBack }) => {
   const { isPro, isAuthenticated, user } = useAuth();
   const { weatherRisk, isLoading } = useAlerts();
 

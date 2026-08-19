@@ -11,7 +11,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 
-export const FirstAidPage: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate = () => {} }) => {
+export const FirstAidPage: React.FC<{ onNavigate?: (tab: string) => void; onGoBack?: () => void }> = ({ onNavigate = () => {}, onGoBack }) => {
   const { user, isPro, isAuthenticated } = useAuth();
   const currentRegion = user?.region || 'UK';
 

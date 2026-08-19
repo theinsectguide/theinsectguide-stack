@@ -22,7 +22,7 @@ import {
   Send,
 } from 'lucide-react';
 
-export const AdminDashboardPage: React.FC<{ onNavigate: (tab: string) => void }> = ({ onNavigate }) => {
+export const AdminDashboardPage: React.FC<{ onNavigate: (tab: string) => void; onGoBack?: () => void }> = ({ onNavigate, onGoBack }) => {
   const { token, isAdmin } = useAuth();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);

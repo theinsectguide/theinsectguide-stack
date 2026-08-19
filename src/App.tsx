@@ -48,13 +48,13 @@ function AppContent() {
 
     // Protected settings page requires authentication
     if (cleanTab === 'settings' && !effectiveIsAuth) {
-      return 'login';
+      return 'register';
     }
 
-    // Pro-only tool tabs protection
+    // Pro-only tool tabs protection -> redirect unauthenticated visitors to register (Sign Up)
     if (PRO_PROTECTED_TABS.includes(cleanTab)) {
       if (!effectiveIsAuth) {
-        return 'login';
+        return 'register';
       }
       if (!effectiveIsPro) {
         return 'pricing';
@@ -62,6 +62,23 @@ function AppContent() {
     }
 
     return cleanTab;
+  };
+
+  const [historyStack, setHistoryStack] = useState<string[]>([]);
+
+  const handleGoBack = () => {
+    if (historyStack.length > 0) {
+      const newStack = [...historyStack];
+      const prevTab = newStack.pop()!;
+      setHistoryStack(newStack);
+      const resolved = checkAccessAndResolveTab(prevTab);
+      setCurrentTab(resolved);
+      window.location.hash = resolved;
+    } else if (currentTab !== 'landing') {
+      setCurrentTab('landing');
+      window.location.hash = 'landing';
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Immediate redirect after login/register if user is currently on login or register screen
@@ -113,6 +130,13 @@ function AppContent() {
 
   const handleNavigate = (tab: string, userOverride?: any) => {
     const resolved = checkAccessAndResolveTab(tab, userOverride);
+    if (resolved !== currentTab) {
+      setHistoryStack((prev) => {
+        const last = prev[prev.length - 1];
+        if (last === currentTab) return prev;
+        return [...prev, currentTab].slice(-15);
+      });
+    }
     setCurrentTab(resolved);
     window.location.hash = resolved;
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -130,24 +154,29 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-[#1a1a2e] text-slate-100 flex flex-col font-sans selection:bg-[#e94560] selection:text-white pb-16 lg:pb-0">
       {/* Top Navigation */}
-      <Navbar currentTab={currentTab} onSelectTab={handleNavigate} />
+      <Navbar
+        currentTab={currentTab}
+        onSelectTab={handleNavigate}
+        canGoBack={currentTab !== 'landing'}
+        onGoBack={handleGoBack}
+      />
 
       {/* Main Viewport */}
       <main className="flex-1">
         {currentTab === 'landing' && <LandingPage onNavigate={handleNavigate} />}
-        {currentTab === 'scan' && <ScanPage onNavigate={handleNavigate} />}
-        {currentTab === 'first-aid' && <FirstAidPage onNavigate={handleNavigate} />}
-        {currentTab === 'pest' && <PestGuidePage onNavigate={handleNavigate} />}
-        {currentTab === 'journal' && <JournalPage onNavigate={handleNavigate} />}
-        {currentTab === 'encyclopedia' && <EncyclopediaPage onNavigate={handleNavigate} />}
-        {currentTab === 'alerts' && <AlertsPage onNavigate={handleNavigate} />}
-        {currentTab === 'weather' && <WeatherPage onNavigate={handleNavigate} />}
-        {currentTab === 'pricing' && <PricingPage onNavigate={handleNavigate} />}
-        {currentTab === 'register' && <RegisterPage onNavigate={handleNavigate} />}
-        {currentTab === 'login' && <LoginPage onNavigate={handleNavigate} />}
-        {currentTab === 'admin-login' && <AdminLoginPage onNavigate={handleNavigate} />}
-        {currentTab === 'admin-dashboard' && <AdminDashboardPage onNavigate={handleNavigate} />}
-        {currentTab === 'settings' && <SettingsPage onNavigate={handleNavigate} />}
+        {currentTab === 'scan' && <ScanPage onNavigate={handleNavigate} onGoBack={handleGoBack} />}
+        {currentTab === 'first-aid' && <FirstAidPage onNavigate={handleNavigate} onGoBack={handleGoBack} />}
+        {currentTab === 'pest' && <PestGuidePage onNavigate={handleNavigate} onGoBack={handleGoBack} />}
+        {currentTab === 'journal' && <JournalPage onNavigate={handleNavigate} onGoBack={handleGoBack} />}
+        {currentTab === 'encyclopedia' && <EncyclopediaPage onNavigate={handleNavigate} onGoBack={handleGoBack} />}
+        {currentTab === 'alerts' && <AlertsPage onNavigate={handleNavigate} onGoBack={handleGoBack} />}
+        {currentTab === 'weather' && <WeatherPage onNavigate={handleNavigate} onGoBack={handleGoBack} />}
+        {currentTab === 'pricing' && <PricingPage onNavigate={handleNavigate} onGoBack={handleGoBack} />}
+        {currentTab === 'register' && <RegisterPage onNavigate={handleNavigate} onGoBack={handleGoBack} />}
+        {currentTab === 'login' && <LoginPage onNavigate={handleNavigate} onGoBack={handleGoBack} />}
+        {currentTab === 'admin-login' && <AdminLoginPage onNavigate={handleNavigate} onGoBack={handleGoBack} />}
+        {currentTab === 'admin-dashboard' && <AdminDashboardPage onNavigate={handleNavigate} onGoBack={handleGoBack} />}
+        {currentTab === 'settings' && <SettingsPage onNavigate={handleNavigate} onGoBack={handleGoBack} />}
       </main>
 
       {/* Mobile Bottom Tab Bar */}

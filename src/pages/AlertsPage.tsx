@@ -16,7 +16,7 @@ import {
   Loader2,
 } from 'lucide-react';
 
-export const AlertsPage: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate = () => {} }) => {
+export const AlertsPage: React.FC<{ onNavigate?: (tab: string) => void; onGoBack?: () => void }> = ({ onNavigate = () => {}, onGoBack }) => {
   const { alerts, weatherRisk, isLoading, markAsRead, requestPushNotifications, refreshAlerts } =
     useAlerts();
   const { user, isPro, isAuthenticated } = useAuth();

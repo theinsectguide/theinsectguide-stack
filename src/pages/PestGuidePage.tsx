@@ -32,7 +32,7 @@ interface PestItem {
   exterminatorCost: string;
 }
 
-export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void }> = ({ onNavigate }) => {
+export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void; onGoBack?: () => void }> = ({ onNavigate, onGoBack }) => {
   const { isPro, isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');

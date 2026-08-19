@@ -29,7 +29,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 
-export const JournalPage: React.FC<{ onNavigate: (tab: string) => void }> = ({ onNavigate }) => {
+export const JournalPage: React.FC<{ onNavigate: (tab: string) => void; onGoBack?: () => void }> = ({ onNavigate, onGoBack }) => {
   const { user, token, isPro, isAuthenticated, refreshUser } = useAuth();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);

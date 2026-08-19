@@ -24,7 +24,7 @@ import {
   X,
 } from 'lucide-react';
 
-export const EncyclopediaPage: React.FC<{ onNavigate: (tab: string) => void }> = ({ onNavigate }) => {
+export const EncyclopediaPage: React.FC<{ onNavigate: (tab: string) => void; onGoBack?: () => void }> = ({ onNavigate, onGoBack }) => {
   const { isPro, isAuthenticated } = useAuth();
   const [speciesList, setSpeciesList] = useState<Species[]>([]);
   const [loading, setLoading] = useState(true);

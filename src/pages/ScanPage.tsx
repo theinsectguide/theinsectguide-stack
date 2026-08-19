@@ -28,9 +28,10 @@ import {
 
 interface ScanPageProps {
   onNavigate: (tab: string) => void;
+  onGoBack?: () => void;
 }
 
-export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate }) => {
+export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
   const { user, token, isPro, isAuthenticated, refreshUser } = useAuth();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -143,7 +144,7 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate }) => {
     if (!selectedImage) return;
 
     if (!token) {
-      onNavigate('login');
+      onNavigate('register');
       return;
     }
 

@@ -4,9 +4,10 @@ import { ShieldAlert, ArrowRight, Loader2, Lock, ArrowLeft } from 'lucide-react'
 
 interface AdminLoginPageProps {
   onNavigate: (tab: string) => void;
+  onGoBack?: () => void;
 }
 
-export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onNavigate }) => {
+export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onNavigate, onGoBack }) => {
   const { adminLogin } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

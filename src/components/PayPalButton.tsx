@@ -35,15 +35,20 @@ export const PayPalButton: React.FC<PayPalButtonProps> = ({ plan, price, onSucce
     return (
       <div className="space-y-3">
         <a
-          href="#login"
-          className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-all"
+          href="#register"
+          className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-display font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-all"
         >
           <Lock className="w-4 h-4" />
-          <span>Sign In to Subscribe ({price})</span>
+          <span>Sign Up to Subscribe ({price})</span>
         </a>
-        <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 pt-1">
-          <ShieldCheck className="w-3.5 h-3.5 text-[#10b981]" />
-          <span>48-hour money-back guarantee on first payment</span>
+        <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
+          <span className="flex items-center gap-1">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#10b981]" />
+            48h money-back guarantee
+          </span>
+          <a href="#login" className="text-[#2e86ff] hover:underline font-medium">
+            Already have account? Sign In
+          </a>
         </div>
       </div>
     );
