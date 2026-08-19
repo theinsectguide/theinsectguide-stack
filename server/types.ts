@@ -137,10 +137,15 @@ export interface SpeciesEntry {
   danger_level: number; // 0-10
   can_sting: boolean;
   can_bite: boolean;
+  stinger_type?: 'barbed' | 'smooth' | 'none';
+  can_sting_repeatedly?: boolean;
   dangerous_to_children: boolean;
   dangerous_to_pets: boolean;
+  pet_child_hazard?: 'Low' | 'Moderate' | 'High';
+  pet_child_explanation?: string;
   regions: ('UK' | 'US' | 'CA' | 'AU' | 'EU' | 'Other')[];
   active_seasons: ('Spring' | 'Summer' | 'Autumn' | 'Winter')[];
+  active_season_details?: string;
   habitat: string;
   description: string;
   first_aid: string;
@@ -148,6 +153,8 @@ export interface SpeciesEntry {
   photo_url: string;
   look_alikes: string[];
   fun_fact: string;
+  conservation_status?: string;
+  legal_protection_status?: string;
   country_top_ten?: {
     country: 'UK' | 'US' | 'CA' | 'AU' | 'EU';
     rank: number;

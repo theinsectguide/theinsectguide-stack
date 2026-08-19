@@ -333,6 +333,18 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
     }
   };
 
+  const handleNewScan = () => {
+    setSelectedImage(null);
+    setCurrentScan(null);
+    setErrorMsg(null);
+    setSavedToJournal(false);
+    setJournalNotes('');
+    setScanProgress(0);
+    setScanStatusText('Validating specimen image...');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+  };
+
   const result: ScanResult | undefined = currentScan?.result;
 
   return (
@@ -630,8 +642,16 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
                 )}
               </div>
 
-              {/* Action Buttons: Share Card & First Aid Shortcut */}
-              <div className="flex items-center gap-2">
+              {/* Action Buttons: New Scan, Share Card & First Aid Shortcut */}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={handleNewScan}
+                  className="min-h-[42px] px-3.5 py-2 rounded-xl bg-[#242448] hover:bg-[#34345c] border border-slate-700 hover:border-[#10b981]/60 text-slate-200 hover:text-white text-xs font-semibold flex items-center gap-2 transition-all active:scale-95 shadow-sm"
+                >
+                  <RefreshCw className="w-4 h-4 text-[#10b981]" />
+                  <span>New Scan</span>
+                </button>
+
                 <button
                   onClick={() => setShowShareModal(true)}
                   className="min-h-[42px] px-3.5 py-2 rounded-xl bg-[#282848] hover:bg-[#34345c] text-slate-200 text-xs font-semibold flex items-center gap-2 transition-colors"
@@ -843,17 +863,26 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
             </h4>
 
             {savedToJournal ? (
-              <div className="p-3 rounded-xl bg-emerald-950/60 border border-[#10b981] text-xs text-[#10b981] flex items-center justify-between">
+              <div className="p-3.5 rounded-xl bg-emerald-950/60 border border-[#10b981] text-xs text-[#10b981] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <span className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4" />
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
                   Successfully saved to your field journal!
                 </span>
-                <button
-                  onClick={() => onNavigate('journal')}
-                  className="font-bold underline text-white hover:text-emerald-300"
-                >
-                  View in Journal
-                </button>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <button
+                    onClick={() => onNavigate('journal')}
+                    className="font-bold underline text-white hover:text-emerald-300 px-2 py-1"
+                  >
+                    View in Journal
+                  </button>
+                  <button
+                    onClick={handleNewScan}
+                    className="px-3.5 py-1.5 rounded-lg bg-[#282848] hover:bg-[#34345c] border border-slate-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>New Scan</span>
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
@@ -883,14 +912,24 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
                   </div>
                 </div>
 
-                <button
-                  onClick={handleSaveToJournal}
-                  disabled={savingJournal}
-                  className="w-full py-2.5 rounded-xl bg-[#2e86ff] hover:bg-blue-600 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-                >
-                  {savingJournal ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookmarkPlus className="w-4 h-4" />}
-                  Save Specimen to Journal (GPS Logged)
-                </button>
+                <div className="flex flex-col sm:flex-row items-center gap-2.5">
+                  <button
+                    onClick={handleSaveToJournal}
+                    disabled={savingJournal}
+                    className="flex-1 w-full py-2.5 rounded-xl bg-[#2e86ff] hover:bg-blue-600 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                  >
+                    {savingJournal ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookmarkPlus className="w-4 h-4" />}
+                    Save Specimen to Journal (GPS Logged)
+                  </button>
+
+                  <button
+                    onClick={handleNewScan}
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#242448] hover:bg-[#34345c] border border-slate-700 hover:border-emerald-500/50 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm"
+                  >
+                    <RefreshCw className="w-4 h-4 text-[#10b981]" />
+                    <span>New Scan</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>

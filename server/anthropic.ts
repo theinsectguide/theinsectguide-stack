@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { ScanResult } from './types';
+import { findCuratedSpecies } from './encyclopediaData';
 
 let genAIClient: GoogleGenAI | null = null;
 
@@ -590,186 +591,133 @@ export function sanitizeAndNormalizeResult(
     lowerLatin.includes('incertae sedis') ||
     lowerCommon.includes('unidentified');
 
-  // 2. Extract Base Structural Properties
-  let status: 'safe' | 'dangerous' | 'venomous' | 'pest' | 'protected' | 'uncertain' = isUncertain ? 'uncertain' : 'safe';
+  // 2. Lookup in Verified Curated Encyclopedia (Single Source of Truth)
+  const curated = !isUncertain ? findCuratedSpecies(latinName, commonName) : null;
+
+  // 3. Extract Base Structural Properties & Safety Attributes
+  let status: 'safe' | 'dangerous' | 'venomous' | 'pest' | 'protected' | 'uncertain' = isUncertain
+    ? 'uncertain'
+    : curated
+    ? curated.category === 'Useful' || curated.category === 'Harmless'
+      ? 'safe'
+      : curated.category === 'Venomous'
+      ? 'venomous'
+      : curated.category === 'Pest'
+      ? 'pest'
+      : curated.category === 'Protected'
+      ? 'protected'
+      : 'dangerous'
+    : raw.status || 'safe';
+
   // UNCERTAIN SPECIES SAFETY RULE: If uncertain, can_sting and can_bite MUST BE NULL (Never assume harmless)
-  let canSting: boolean | null = isUncertain ? null : Boolean(raw.can_sting);
-  let canBite: boolean | null = isUncertain ? null : Boolean(raw.can_bite);
-  let stingerType: 'barbed' | 'smooth' | 'none' | null = isUncertain ? null : raw.stinger_type || (canSting ? 'smooth' : 'none');
-  let canStingRepeatedly: boolean | null = isUncertain ? null : Boolean(raw.can_sting_repeatedly);
-  let petChildHazard: 'Low' | 'Moderate' | 'High' = raw.pet_child_hazard || (isUncertain ? 'Moderate' : 'Low');
-  let petChildExplanation = raw.pet_child_explanation || (isUncertain ? 'Species identification is uncertain. Exercise caution and do not handle unknown specimens.' : '');
-  let firstAid = raw.first_aid || 'Wash area thoroughly with clean cold water and soap. Apply a cold compress.';
-  let emergencyGuidance =
-    raw.when_to_call_emergency ||
-    'Seek immediate medical assistance if experiencing difficulty breathing, face/throat swelling, or dizziness (anaphylaxis).';
-  let legalProtection = raw.legal_protection_status || 'Location dependent (check regional wildlife regulations).';
-  let conservationStatus = raw.conservation_status || 'Not evaluated';
-  let activeSeason = raw.active_season || 'Spring through Autumn';
-  let interestingFacts = raw.interesting_facts || 'Insects are essential components of global biodiversity, pollination, and soil aeration.';
+  let canSting: boolean | null = isUncertain
+    ? null
+    : curated
+    ? curated.can_sting
+    : typeof raw.can_sting === 'boolean'
+    ? raw.can_sting
+    : false;
 
-  if (!isUncertain) {
-    // ---------------------------------------------------------------------------
-    // SPECIES SAFETY PROFILE LOOKUP: European Hornet (Vespa crabro)
-    // ---------------------------------------------------------------------------
-    if (lowerLatin.includes('vespa crabro') || lowerCommon.includes('european hornet')) {
-      status = 'dangerous';
-      canSting = true;
-      canBite = true;
-      stingerType = 'smooth';
-      canStingRepeatedly = true;
-      petChildHazard = 'Moderate';
-      petChildExplanation =
-        'Hornets deliver a painful sting with repeat attack capability. Keep children and curious pets away from flying corridors and nests.';
-      firstAid =
-        'Wash sting site immediately with soap and water. Apply an ice pack wrapped in a cloth for 15 minutes. Take an over-the-counter antihistamine if swelling occurs. Do NOT attempt to scrape out a stinger unless visibly left behind.';
-      emergencyGuidance =
-        'Call emergency services (999/911/112) immediately if stung in the mouth or throat, or if signs of anaphylaxis develop (wheezing, lip/tongue swelling, severe dizziness, full-body hives).';
-      legalProtection =
-        'Location dependent — Specially protected under nature conservation law in Germany (§44 BNatSchG; nests cannot be destroyed without permit), but not legally protected in the UK or North America.';
-      conservationStatus = 'Least Concern (IUCN)';
-    }
+  let canBite: boolean | null = isUncertain
+    ? null
+    : curated
+    ? curated.can_bite
+    : typeof raw.can_bite === 'boolean'
+    ? raw.can_bite
+    : false;
 
-    // ---------------------------------------------------------------------------
-    // SPECIES SAFETY PROFILE LOOKUP: Asian Hornet (Vespa velutina)
-    // ---------------------------------------------------------------------------
-    else if (lowerLatin.includes('vespa velutina') || lowerCommon.includes('asian hornet') || lowerCommon.includes('yellow-legged hornet')) {
-      status = 'dangerous';
-      canSting = true;
-      canBite = true;
-      stingerType = 'smooth';
-      canStingRepeatedly = true;
-      petChildHazard = 'High';
-      petChildExplanation =
-        'Aggressive defensive swarming behavior near nests. Invasive apex predator of honeybees.';
-      firstAid =
-        'Wash the sting site immediately. Apply cold packs. If stung in the face/neck or multiple times, seek medical assessment. Report sighting to local environmental authorities (DEFRA in UK).';
-      legalProtection =
-        'Invasive species of high concern across the UK and EU. Mandatory reporting required.';
-    }
+  let stingerType: 'barbed' | 'smooth' | 'none' | null = isUncertain
+    ? null
+    : curated
+    ? curated.stinger_type || (curated.can_sting ? 'smooth' : 'none')
+    : raw.stinger_type || (canSting ? 'smooth' : 'none');
 
-    // ---------------------------------------------------------------------------
-    // SPECIES SAFETY PROFILE LOOKUP: Honeybee (Apis mellifera)
-    // ---------------------------------------------------------------------------
-    else if (lowerLatin.includes('apis mellifera') || (lowerCommon.includes('honey') && lowerCommon.includes('bee'))) {
-      status = 'safe';
-      canSting = true;
-      canBite = false;
-      stingerType = 'barbed';
-      canStingRepeatedly = false;
-      petChildHazard = 'Low';
-      petChildExplanation =
-        'Docile keystone pollinator. Stings primarily in defense of the hive or when physically compressed, stepped on, or trapped. Stings can trigger allergic reactions in sensitive individuals.';
-      firstAid =
-        'Promptly scrape off the barbed stinger using a fingernail or flat plastic card without squeezing the venom sac. Wash area with cold water and soap, and apply an ice pack for 10-15 minutes.';
-      emergencyGuidance =
-        'Seek urgent emergency medical care if the victim experiences difficulty breathing, swelling of the lips, tongue, face or throat, widespread hives, dizziness, or stings involving the mouth or airway (anaphylaxis).';
-      legalProtection =
-        'Location dependent — legal protection and beekeeping regulations vary by jurisdiction.';
-      conservationStatus = 'Not established in current reference data';
-      activeSeason =
-        'Active: Year-round within established colonies. Foraging activity varies seasonally with temperature and local climate.';
-      interestingFacts =
-        'Honey bees communicate the location of food sources through the waggle dance. Worker bees are female and perform different roles within the colony, including nursing, guarding and foraging.';
-    }
+  let canStingRepeatedly: boolean | null = isUncertain
+    ? null
+    : curated
+    ? curated.can_sting_repeatedly !== undefined
+      ? curated.can_sting_repeatedly
+      : stingerType === 'smooth'
+    : typeof raw.can_sting_repeatedly === 'boolean'
+    ? raw.can_sting_repeatedly
+    : stingerType === 'smooth';
 
-    // ---------------------------------------------------------------------------
-    // SPECIES SAFETY PROFILE LOOKUP: Hoverflies (Syrphidae)
-    // ---------------------------------------------------------------------------
-    else if (lowerLatin.includes('syrph') || lowerCommon.includes('hoverfly') || lowerCommon.includes('hover fly')) {
-      status = 'safe';
-      canSting = false;
-      canBite = false;
-      stingerType = 'none';
-      canStingRepeatedly = false;
-      petChildHazard = 'Low';
-      petChildExplanation =
-        'Non-venomous pollinator lacking a stinger and venom-delivery apparatus. Hoverflies do not pose a stinging threat to humans or pets.';
-      firstAid = 'Non-venomous species. No specific medical first aid required.';
-      emergencyGuidance = 'Hoverflies lack a venomous stinger or biting apparatus and pose no envenomation risk.';
-      legalProtection = 'Beneficial garden pollinator. No special commercial restrictions.';
-      conservationStatus = 'Least Concern (IUCN)';
-    }
+  let petChildHazard: 'Low' | 'Moderate' | 'High' = isUncertain
+    ? 'Moderate'
+    : curated
+    ? curated.pet_child_hazard || (curated.danger_level >= 7 ? 'High' : curated.danger_level >= 4 ? 'Moderate' : 'Low')
+    : raw.pet_child_hazard || 'Low';
 
-    // ---------------------------------------------------------------------------
-    // SPECIES SAFETY PROFILE LOOKUP: Yellowjackets (Vespula spp. / Dolichovespula)
-    // ---------------------------------------------------------------------------
-    else if (lowerLatin.includes('vespula') || lowerLatin.includes('dolichovespula') || lowerCommon.includes('yellowjacket') || lowerCommon.includes('common wasp') || lowerCommon.includes('wasp')) {
-      status = 'dangerous';
-      canSting = true;
-      canBite = true;
-      stingerType = 'smooth';
-      canStingRepeatedly = true;
-      petChildHazard = 'Moderate';
-      petChildExplanation =
-        'Can sting repeatedly and aggressively defend underground or wall void nests. Scavenges sugary foods around picnic areas.';
-      firstAid =
-        'Wash sting site with soap and water. Apply an ice pack wrapped in a towel for 15 minutes. Take oral antihistamine or apply hydrocortisone cream for itching.';
-      emergencyGuidance =
-        'Emergency medical attention required if stung in the mouth/throat, or if systemic symptoms appear (respiratory distress, widespread rash, dizziness).';
-    }
+  let petChildExplanation = isUncertain
+    ? 'Species identification is uncertain. Exercise caution and do not handle unknown specimens.'
+    : curated
+    ? curated.pet_child_explanation || ''
+    : raw.pet_child_explanation || '';
 
-    // ---------------------------------------------------------------------------
-    // SPECIES SAFETY PROFILE LOOKUP: Bumblebees (Bombus spp.)
-    // ---------------------------------------------------------------------------
-    else if (lowerLatin.includes('bombus') || lowerCommon.includes('bumblebee') || lowerCommon.includes('bumble bee')) {
-      status = 'safe';
-      canSting = true;
-      canBite = false;
-      stingerType = 'smooth';
-      canStingRepeatedly = true;
-      petChildHazard = 'Low';
-      petChildExplanation =
-        'Gentle, non-aggressive pollinator. Only stings if severely crushed, stepped on, or nest is directly disturbed.';
-      firstAid =
-        'Wash sting site with soap and water. Apply a cool compress to soothe localized pain.';
-      emergencyGuidance =
-        'Seek urgent emergency medical care if systemic allergic symptoms, breathing difficulties, or swelling of the airway develop.';
-    }
+  let firstAid = isUncertain
+    ? 'If stung or bitten by an unidentified specimen, wash area with soap and water, apply cold compress, and seek medical advice.'
+    : curated
+    ? curated.first_aid
+    : raw.first_aid || 'Wash area thoroughly with clean cold water and soap. Apply a cold compress.';
 
-    // ---------------------------------------------------------------------------
-    // SPECIES SAFETY PROFILE LOOKUP: Spiders & Ticks
-    // ---------------------------------------------------------------------------
-    else if (lowerLatin.includes('latrodectus') || lowerCommon.includes('black widow')) {
-      status = 'venomous';
-      canSting = false;
-      canBite = true;
-      stingerType = 'none';
-      petChildHazard = 'High';
-      petChildExplanation =
-        'Possesses potent alpha-latrotoxin venom. High medical risk for young children, elderly, and small pets.';
-      firstAid =
-        'Wash bite with antiseptic soap. Keep limb elevated and immobilized. Apply a cool pack. Seek prompt medical care; do NOT cut the wound or attempt venom suction.';
-      emergencyGuidance =
-        'Go to nearest Emergency Department immediately. Symptoms include severe abdominal cramping, muscle rigidity, sweating, and rapid heart rate.';
-    } else if (lowerLatin.includes('loxosceles') || lowerCommon.includes('brown recluse')) {
-      status = 'venomous';
-      canSting = false;
-      canBite = true;
-      stingerType = 'none';
-      petChildHazard = 'High';
-      petChildExplanation =
-        'Possesses cytotoxic sphingomyelinase D venom capable of causing necrotic skin lesions. High hazard.';
-      firstAid =
-        'Clean bite site thoroughly. Apply ice compress to slow enzymatic tissue breakdown. Immobilize area and seek medical physician evaluation.';
-      emergencyGuidance =
-        'Seek emergency medical attention if bite shows spreading dark necrosis, ulceration, fever, or systemic chills.';
-    } else if (lowerLatin.includes('ixodes') || lowerCommon.includes('tick')) {
-      status = 'dangerous';
-      canSting = false;
-      canBite = true;
-      stingerType = 'none';
-      petChildHazard = 'High';
-      petChildExplanation =
-        'Vector for Lyme disease, Babesiosis, and Anaplasmosis in humans and domestic dogs.';
-      firstAid =
-        'Use fine-tipped tweezers to grasp tick directly at skin level. Pull steadily upward without twisting or crushing the abdomen. Disinfect bite with alcohol. Save tick in a sealed container for medical identification.';
-      emergencyGuidance =
-        'Consult a physician if expanding target/bullseye rash (Erythema migrans), fever, joint fatigue, or facial palsy develops within 3 to 30 days.';
-    }
-  }
+  let emergencyGuidance = isUncertain
+    ? 'Seek immediate emergency medical care (999/911/112) if experiencing difficulty breathing, throat swelling, hives, or severe dizziness.'
+    : curated
+    ? curated.when_to_call_emergency
+    : raw.when_to_call_emergency ||
+      'Seek immediate medical assistance if experiencing difficulty breathing, face/throat swelling, or dizziness (anaphylaxis).';
 
-  // 3. DETERMINISTIC THREAT ENGINE: Calculate Threat Index (0-10) or return null for uncertain
+  let legalProtection = isUncertain
+    ? 'Location dependent (check regional wildlife regulations).'
+    : curated
+    ? curated.legal_protection_status || 'Location dependent (check regional wildlife regulations).'
+    : raw.legal_protection_status || 'Location dependent (check regional wildlife regulations).';
+
+  let conservationStatus = isUncertain
+    ? 'Not evaluated'
+    : curated
+    ? curated.conservation_status || 'Least Concern (IUCN)'
+    : raw.conservation_status || 'Not evaluated';
+
+  let activeSeason = isUncertain
+    ? 'Active season varies by region and climate.'
+    : curated
+    ? curated.active_season_details || (curated.active_seasons.join(', ') + ' (Seasonal timing varies by region and climate)')
+    : raw.active_season || 'Spring through Autumn (Varies by local climate)';
+
+  let interestingFacts = isUncertain
+    ? 'Insects are essential components of global biodiversity, pollination, and soil health.'
+    : curated
+    ? curated.fun_fact
+    : raw.interesting_facts || 'Insects are essential components of global biodiversity, pollination, and soil health.';
+
+  let description = isUncertain
+    ? 'Morphological features could not be conclusively matched to a known species with sufficient confidence. Please provide a clearer photograph in natural lighting.'
+    : curated
+    ? curated.description
+    : raw.description || 'Specimen morphology evaluated via multi-stage neural vision classifier.';
+
+  let habitat = isUncertain
+    ? 'Various terrestrial habitats.'
+    : curated
+    ? curated.habitat
+    : raw.habitat || 'Temperate gardens, woodlands, and residential environments.';
+
+  let lookAlikes = isUncertain
+    ? []
+    : curated
+    ? curated.look_alikes
+    : Array.isArray(raw.look_alikes)
+    ? raw.look_alikes
+    : [];
+
+  let geographicRegions = curated
+    ? curated.regions
+    : Array.isArray(raw.geographic_regions) && raw.geographic_regions.length > 0
+    ? raw.geographic_regions
+    : ['UK', 'US', 'EU', 'CA', 'AU'];
+
+  // 4. DETERMINISTIC THREAT ENGINE: Calculate Threat Index (0-10) or return null for uncertain
   let dangerLevel: number | null = null;
   let threatIndexDisplay = 'N/A';
   let threatExplanation = 'Threat level cannot be determined because the species could not be identified with sufficient confidence.';
@@ -820,13 +768,11 @@ export function sanitizeAndNormalizeResult(
     identification_notes: raw.identification_notes || '',
     conservation_status: conservationStatus,
     legal_protection_status: legalProtection,
-    description: raw.description || 'Specimen morphology evaluated via multi-stage neural vision classifier.',
-    habitat: raw.habitat || 'Temperate gardens, woodlands, and residential environments.',
+    description: description,
+    habitat: habitat,
     active_season: activeSeason,
-    geographic_regions: Array.isArray(raw.geographic_regions) && raw.geographic_regions.length > 0
-      ? raw.geographic_regions
-      : ['UK', 'US', 'EU', 'CA', 'AU'],
-    look_alikes: Array.isArray(raw.look_alikes) ? raw.look_alikes : [],
+    geographic_regions: geographicRegions,
+    look_alikes: lookAlikes,
     first_aid: firstAid,
     when_to_call_emergency: emergencyGuidance,
     pest_control: raw.pest_control
