@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, Loader2, Check, AlertCircle, Lock } from 'lucide-react';
+import { ShieldCheck, Loader2, CheckCircle2, AlertCircle, Lock, LayoutDashboard, Sparkles, ArrowRight } from 'lucide-react';
 
 interface PayPalButtonProps {
   plan: 'monthly' | 'annual';
@@ -31,6 +31,12 @@ export const PayPalButton: React.FC<PayPalButtonProps> = ({ plan, price, onSucce
       });
   }, []);
 
+  const handleConfirmOk = () => {
+    if (onSuccess) {
+      onSuccess();
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="space-y-3">
@@ -54,18 +60,6 @@ export const PayPalButton: React.FC<PayPalButtonProps> = ({ plan, price, onSucce
     );
   }
 
-  if (completed) {
-    return (
-      <div className="p-4 rounded-2xl bg-emerald-950/70 border border-[#10b981] text-center animate-in zoom-in-95 duration-200">
-        <div className="w-10 h-10 rounded-full bg-[#10b981] text-black flex items-center justify-center mx-auto mb-2 font-bold shadow-md">
-          <Check className="w-6 h-6" />
-        </div>
-        <h4 className="font-display font-bold text-white text-base">Paiement PayPal Confirmé !</h4>
-        <p className="text-xs text-emerald-200 mt-1">Votre abonnement Pro est activé avec succès.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-3">
       {errorMsg && (
@@ -84,7 +78,7 @@ export const PayPalButton: React.FC<PayPalButtonProps> = ({ plan, price, onSucce
       {loading && (
         <div className="flex items-center justify-center gap-2 py-2 text-xs text-emerald-400">
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Vérification et capture sécurisée PayPal en cours...</span>
+          <span>Vérification et capture sécurisée en cours...</span>
         </div>
       )}
 
@@ -95,6 +89,7 @@ export const PayPalButton: React.FC<PayPalButtonProps> = ({ plan, price, onSucce
           currency: 'USD',
           intent: 'capture',
           components: 'buttons',
+          disableFunding: 'bancontact,sofort,giropay,mybank,eps,ideal,sepa,paylater',
         }}
       >
         <div className="min-h-[44px]">
@@ -157,31 +152,27 @@ export const PayPalButton: React.FC<PayPalButtonProps> = ({ plan, price, onSucce
                 // Strict verification: Server MUST return success: true & status: 'COMPLETED'
                 if (!res.ok || !captureResult.success || captureResult.status !== 'COMPLETED') {
                   throw new Error(
-                    captureResult.error || 'Le paiement n\'a pas pu être validé par PayPal. Accès Pro non accordé.'
+                    captureResult.error || 'Le paiement n\'a pas pu être validé. Accès Pro non accordé.'
                   );
                 }
 
-                setCompleted(true);
                 await refreshUser();
-
-                setTimeout(() => {
-                  if (onSuccess) onSuccess();
-                }, 1500);
+                setCompleted(true);
               } catch (err: any) {
                 console.error('[PayPal onApprove Error]', err);
-                setErrorMsg(err.message || 'Échec de la validation du paiement PayPal.');
+                setErrorMsg(err.message || 'Échec de la validation du paiement.');
               } finally {
                 setLoading(false);
               }
             }}
             onCancel={() => {
               setLoading(false);
-              setCancelMsg('Transaction PayPal annulée. Votre compte reste en formule gratuite.');
+              setCancelMsg('Transaction annulée. Votre compte reste en formule gratuite.');
             }}
             onError={(err) => {
               setLoading(false);
               console.error('[PayPal SDK Error]', err);
-              setErrorMsg('Une erreur PayPal est survenue. Veuillez vérifier vos informations ou réessayer.');
+              setErrorMsg('Une erreur est survenue lors du paiement. Veuillez réessayer ou vérifier vos informations.');
             }}
           />
         </div>
@@ -192,6 +183,62 @@ export const PayPalButton: React.FC<PayPalButtonProps> = ({ plan, price, onSucce
         <ShieldCheck className="w-3.5 h-3.5 text-[#10b981]" />
         <span>Garantie satisfait ou remboursé 48h sur le 1er paiement</span>
       </div>
+
+      {/* Full Modal Confirmation on Payment Receipt */}
+      {completed && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="max-w-md w-full rounded-3xl bg-[#16162c] border-2 border-emerald-500/80 shadow-2xl p-6 sm:p-7 text-center space-y-5 animate-in zoom-in-95 duration-200">
+            {/* Success Icon */}
+            <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/30 animate-bounce">
+              <CheckCircle2 className="w-10 h-10" />
+            </div>
+
+            {/* Title & Description */}
+            <div className="space-y-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold uppercase tracking-wider">
+                <Sparkles className="w-3.5 h-3.5" />
+                Paiement Confirmé
+              </span>
+              <h3 className="font-display font-black text-xl sm:text-2xl text-white">
+                Paiement Reçu avec Succès !
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                Votre paiement pour la formule{' '}
+                <strong className="text-emerald-400 font-bold">
+                  {plan === 'annual' ? 'Annuelle ($29.99/an)' : 'Mensuelle ($4.99/mois)'}
+                </strong>{' '}
+                a bien été reçu et validé. Votre statut <strong className="text-white">PRO</strong> est maintenant actif.
+              </p>
+            </div>
+
+            {/* Feature Perks Summary */}
+            <div className="rounded-2xl bg-[#1f1f3a] border border-[#303058] p-3.5 text-left text-xs text-slate-300 space-y-1.5">
+              <div className="flex items-center gap-2 text-emerald-300 font-bold">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Accès illimité à l'identification Claude Vision</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-200">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Journal GPS d'observation &amp; Export PDF</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-200">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Garantie satisfait ou remboursé 48h active</span>
+              </div>
+            </div>
+
+            {/* OK Action Button directly to Dashboard */}
+            <button
+              onClick={handleConfirmOk}
+              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-[#10b981] hover:brightness-110 text-slate-950 font-display font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/25 active:scale-98 transition-all cursor-pointer"
+            >
+              <LayoutDashboard className="w-5 h-5" />
+              <span>OK — Accéder à mon Dashboard</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

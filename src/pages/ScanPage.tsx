@@ -408,14 +408,61 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
         <div className="space-y-6 animate-in fade-in duration-300">
           {/* Main Species Profile Card */}
           <div className="rounded-2xl sm:rounded-3xl bg-[#1c1c34] border border-[#2e2e50] p-4 sm:p-6 md:p-8 space-y-6 shadow-2xl">
+            {/* Top Provenance & Confidence Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#282848] text-xs">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#10b981]/15 border border-[#10b981]/40 text-[#10b981] font-semibold text-[11px]">
+                  <Sparkles className="w-3 h-3" />
+                  <span>
+                    {result.vision_model_used
+                      ? result.vision_model_used.includes('claude')
+                        ? 'Claude Sonnet 4.5 Vision'
+                        : result.vision_model_used.includes('gemini')
+                        ? 'Gemini 3.7 Flash Vision'
+                        : result.vision_model_used
+                      : 'Claude Sonnet 4.5 Vision'}
+                  </span>
+                </span>
+                <span
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                    result.confidence === 'HIGH'
+                      ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-300'
+                      : result.confidence === 'MEDIUM'
+                      ? 'bg-amber-950/80 border-amber-500/50 text-amber-300'
+                      : 'bg-rose-950/80 border-rose-500/50 text-rose-300'
+                  }`}
+                >
+                  Confidence: {result.confidence || 'HIGH'}
+                </span>
+              </div>
+              <span className="text-slate-400 text-[11px] font-mono">
+                Active: {result.active_season || 'All Year'}
+              </span>
+            </div>
+
+            {/* Uncertainty Warning Banner */}
+            {result.is_uncertain && (
+              <div className="p-3.5 rounded-2xl bg-amber-950/60 border border-amber-500/50 text-xs text-amber-200 flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-bold text-white">Identification Uncertain / Low Confidence</p>
+                  <p>
+                    Visual features could not be definitively confirmed from this angle or lighting. Do not handle unknown specimens. Please provide a closer, sharp macro photograph for confirmation.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Top Badge & Action Icons */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#282848] pb-5">
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <DangerBadge status={result.status} dangerLevel={result.danger_level} size="lg" />
-                  <span className="px-2.5 py-1 rounded-full bg-[#141424] border border-slate-700 text-[11px] font-mono text-slate-300">
-                    Active: {result.active_season || 'All Year'}
-                  </span>
+                  {result.stinger_type && result.stinger_type !== 'none' && (
+                    <span className="px-2.5 py-1 rounded-full bg-[#141424] border border-slate-700 text-[11px] text-slate-300">
+                      Stinger: {result.stinger_type === 'smooth' ? 'Smooth (Repeat Sting)' : 'Barbed (Lodges)'}
+                    </span>
+                  )}
                 </div>
                 <h2 className="font-display font-black text-2xl sm:text-3xl md:text-4xl text-white pt-2">
                   {result.common_name}
@@ -435,7 +482,7 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
                   <span>Share Card</span>
                 </button>
 
-                {result.danger_level >= 5 && (
+                {typeof result.danger_level === 'number' && result.danger_level >= 5 && (
                   <button
                     onClick={() => onNavigate('first-aid')}
                     className="min-h-[42px] px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-rose-900/40 transition-all active:scale-95"
@@ -451,18 +498,40 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 text-xs">
               <div className="p-3 rounded-xl bg-[#141424] border border-slate-800 space-y-1">
                 <span className="text-[10px] text-slate-400 block">Threat Index</span>
-                <span className="font-bold text-sm text-white">{result.danger_level} / 10</span>
+                <span className={`font-bold text-sm ${typeof result.danger_level === 'number' ? 'text-white' : 'text-slate-400'}`}>
+                  {typeof result.danger_level === 'number'
+                    ? `${result.danger_level} / 10`
+                    : result.threat_index_display || 'N/A'}
+                </span>
               </div>
               <div className="p-3 rounded-xl bg-[#141424] border border-slate-800 space-y-1">
                 <span className="text-[10px] text-slate-400 block">Can Bite / Sting?</span>
-                <span className={`font-bold text-sm ${result.can_bite || result.can_sting ? 'text-amber-400' : 'text-[#10b981]'}`}>
-                  {result.can_bite || result.can_sting ? 'Yes, Sting / Bite Risk' : 'Harmless / No Stinger'}
+                <span
+                  className={`font-bold text-sm ${
+                    result.can_bite || result.can_sting ? 'text-amber-400' : 'text-[#10b981]'
+                  }`}
+                >
+                  {result.can_sting && result.can_bite
+                    ? 'Yes (Sting & Bite)'
+                    : result.can_sting
+                    ? 'Yes (Sting)'
+                    : result.can_bite
+                    ? 'Yes (Bite)'
+                    : 'Harmless / No Stinger'}
                 </span>
               </div>
               <div className="p-3 rounded-xl bg-[#141424] border border-slate-800 space-y-1">
                 <span className="text-[10px] text-slate-400 block">Pet / Child Hazard</span>
-                <span className={`font-bold text-sm ${result.dangerous_to_children || result.dangerous_to_pets ? 'text-rose-400' : 'text-[#10b981]'}`}>
-                  {result.dangerous_to_children || result.dangerous_to_pets ? 'Caution Advised' : 'Safe for Pets/Kids'}
+                <span
+                  className={`font-bold text-sm ${
+                    result.pet_child_hazard === 'High'
+                      ? 'text-rose-400'
+                      : result.pet_child_hazard === 'Moderate'
+                      ? 'text-amber-400'
+                      : 'text-[#10b981]'
+                  }`}
+                >
+                  {result.pet_child_hazard || (typeof result.danger_level === 'number' && result.danger_level > 4 ? 'Moderate' : 'Low')}
                 </span>
               </div>
               <div className="p-3 rounded-xl bg-[#141424] border border-slate-800 space-y-1">
@@ -472,6 +541,48 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
                 </span>
               </div>
             </div>
+
+            {/* Threat Index Explanation for Uncertain State */}
+            {(result.danger_level === null || result.confidence === 'LOW' || result.is_uncertain) && (
+              <div className="p-3.5 rounded-xl bg-[#141424] border border-slate-800 text-xs space-y-1">
+                <span className="font-bold text-slate-300 flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                  Threat Assessment Notice:
+                </span>
+                <p className="text-slate-400 leading-relaxed">
+                  {result.threat_explanation || 'Threat level cannot be determined because the species could not be identified with sufficient confidence.'}
+                </p>
+              </div>
+            )}
+
+            {/* Pet & Child Safety Explanation */}
+            {result.pet_child_explanation && (
+              <div className="p-3.5 rounded-xl bg-[#141424] border border-slate-800 text-xs space-y-1">
+                <span className="font-bold text-amber-300 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                  Pet &amp; Child Safety Advisory:
+                </span>
+                <p className="text-slate-300 leading-relaxed">{result.pet_child_explanation}</p>
+              </div>
+            )}
+
+            {/* Visual Anatomical Evidence */}
+            {result.visual_evidence && result.visual_evidence.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="font-display font-bold text-xs uppercase text-emerald-400 tracking-wider flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <span>Morphological Diagnostic Evidence (Claude Vision)</span>
+                </h4>
+                <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-900/40 text-xs text-emerald-200 space-y-1.5">
+                  {result.visual_evidence.map((evidence, idx) => (
+                    <div key={idx} className="flex items-start gap-2">
+                      <span className="text-emerald-400 font-bold">•</span>
+                      <span>{evidence}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Specimen Description */}
             <div className="space-y-2">
@@ -509,18 +620,40 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
             )}
 
             {/* Lookalike Confusion Warning */}
-            {result.look_alikes && result.look_alikes.length > 0 && (
+            {((result.possible_lookalikes && result.possible_lookalikes.length > 0) ||
+              (result.look_alikes && result.look_alikes.length > 0)) && (
               <div className="space-y-2">
                 <h4 className="font-display font-bold text-xs uppercase text-amber-400 tracking-wider flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4" />
-                  <span>Common Lookalike Species</span>
+                  <span>Lookalike Differential Diagnosis</span>
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                  {result.look_alikes.map((lk, idx) => (
+                  {(result.possible_lookalikes && result.possible_lookalikes.length > 0
+                    ? result.possible_lookalikes
+                    : result.look_alikes
+                  ).map((lk, idx) => (
                     <div key={idx} className="p-3 rounded-xl bg-[#141424] border border-slate-800 text-slate-300">
                       <span className="font-bold text-white block mb-0.5">{lk}</span>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Legal & Conservation Status */}
+            {(result.conservation_status || result.legal_protection_status) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="p-3.5 rounded-xl bg-[#141424] border border-slate-800 space-y-1">
+                  <span className="font-semibold text-slate-300 block">Conservation Status:</span>
+                  <p className="text-slate-400 leading-relaxed">
+                    {result.conservation_status || 'Least Concern / Not evaluated'}
+                  </p>
+                </div>
+                <div className="p-3.5 rounded-xl bg-[#141424] border border-slate-800 space-y-1">
+                  <span className="font-semibold text-slate-300 block">Legal Protection Status:</span>
+                  <p className="text-slate-400 leading-relaxed">
+                    {result.legal_protection_status || 'Location dependent'}
+                  </p>
                 </div>
               </div>
             )}

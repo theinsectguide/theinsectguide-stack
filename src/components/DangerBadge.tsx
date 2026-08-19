@@ -2,8 +2,8 @@ import React from 'react';
 import { ShieldCheck, AlertTriangle, Skull, Bug, ShieldAlert, Sparkles } from 'lucide-react';
 
 interface DangerBadgeProps {
-  status: 'safe' | 'dangerous' | 'venomous' | 'pest' | 'protected' | 'useful' | string;
-  dangerLevel?: number; // 0-10
+  status: 'safe' | 'dangerous' | 'venomous' | 'pest' | 'protected' | 'useful' | 'uncertain' | string;
+  dangerLevel?: number | null; // 0-10 or null/undefined
   showIcon?: boolean;
   size?: 'sm' | 'md' | 'lg';
 }
@@ -20,7 +20,11 @@ export const DangerBadge: React.FC<DangerBadgeProps> = ({
   let badgeText = 'Safe';
   let Icon = ShieldCheck;
 
-  if (normStatus === 'dangerous') {
+  if (normStatus === 'uncertain' || normStatus === 'unknown') {
+    bgColor = 'bg-slate-900/80 border-slate-600/50 text-slate-300';
+    badgeText = 'Uncertain';
+    Icon = AlertTriangle;
+  } else if (normStatus === 'dangerous') {
     bgColor = 'bg-amber-950/80 border-[#f5a623]/50 text-[#f5a623]';
     badgeText = 'Dangerous';
     Icon = AlertTriangle;

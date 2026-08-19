@@ -1,0 +1,54 @@
+{
+  "users": {},
+  "scans": {
+    "6a8562a35ea313ccc01b0196": {
+      "user_id": "test_stress_audit_user_99",
+      "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+      "result": {
+        "common_name": "European Hornet",
+        "latin_name": "Vespa crabro",
+        "status": "dangerous",
+        "danger_level": 6,
+        "can_sting": true,
+        "can_bite": true,
+        "stinger_type": "smooth",
+        "can_sting_repeatedly": true,
+        "dangerous_to_children": true,
+        "dangerous_to_pets": true,
+        "pet_child_hazard": "Moderate",
+        "confidence": "HIGH",
+        "vision_model_used": "claude-sonnet-4-5-20250929",
+        "provider_used": "anthropic",
+        "fallback_used": false,
+        "description": "Vespa crabro specimen analyzed with Claude Vision.",
+        "habitat": "Woodlands, tree cavities.",
+        "active_season": "May - October",
+        "geographic_regions": [
+          "UK",
+          "EU",
+          "US"
+        ],
+        "look_alikes": [
+          "Asian Hornet (Vespa velutina)"
+        ],
+        "first_aid": "Wash sting site with soap/water. Apply ice pack.",
+        "when_to_call_emergency": "Call 999/911 if breathing difficulties develop.",
+        "interesting_facts": "Smooth stinger allows multiple defensive stings."
+      },
+      "insect_name": "European Hornet",
+      "latin_name": "Vespa crabro",
+      "identified_species": "European Hornet (Vespa crabro)",
+      "danger_level": 6,
+      "vision_model_used": "claude-sonnet-4-5-20250929",
+      "provider_used": "anthropic",
+      "confidence": "HIGH",
+      "fallback_used": false,
+      "timestamp": "2026-08-19T08:00:35.497Z",
+      "_id": "6a8562a35ea313ccc01b0196"
+    }
+  },
+  "journal_entries": {},
+  "alerts": {},
+  "transactions": {},
+  "last_persisted_at": "2026-08-19T08:00:35.499Z"
+}

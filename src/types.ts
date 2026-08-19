@@ -21,12 +21,27 @@ export interface User {
 export interface ScanResult {
   common_name: string;
   latin_name: string;
-  status: 'safe' | 'dangerous' | 'venomous' | 'pest' | 'protected';
-  danger_level: number; // 0-10
+  status: 'safe' | 'dangerous' | 'venomous' | 'pest' | 'protected' | 'uncertain';
+  danger_level: number | null; // 0-10 or null if uncertain
+  threat_index_display?: string; // e.g. "N/A" or "6 / 10"
+  threat_explanation?: string;
   can_sting: boolean;
   can_bite: boolean;
   dangerous_to_children: boolean;
   dangerous_to_pets: boolean;
+  pet_child_hazard?: 'Low' | 'Moderate' | 'High';
+  pet_child_explanation?: string;
+  confidence?: 'HIGH' | 'MEDIUM' | 'LOW';
+  vision_model_used?: string;
+  provider_used?: string;
+  fallback_used?: boolean;
+  visual_evidence?: string[];
+  possible_lookalikes?: string[];
+  identification_notes?: string;
+  stinger_type?: 'barbed' | 'smooth' | 'none';
+  can_sting_repeatedly?: boolean;
+  conservation_status?: string;
+  legal_protection_status?: string;
   description: string;
   habitat: string;
   active_season: string;
@@ -54,7 +69,14 @@ export interface Scan {
   result: ScanResult;
   insect_name: string;
   latin_name: string;
-  danger_level: number;
+  identified_species?: string;
+  danger_level: number | null;
+  threat_index_display?: string;
+  threat_explanation?: string;
+  vision_model_used?: string;
+  provider_used?: string;
+  confidence?: 'HIGH' | 'MEDIUM' | 'LOW';
+  fallback_used?: boolean;
   timestamp: string;
   location?: {
     lat: number;
@@ -73,8 +95,8 @@ export interface JournalEntry {
   photo_url: string;
   insect_name: string;
   latin_name?: string;
-  danger_level?: number;
-  status_type?: 'safe' | 'dangerous' | 'venomous' | 'pest' | 'protected';
+  danger_level?: number | null;
+  status_type?: 'safe' | 'dangerous' | 'venomous' | 'pest' | 'protected' | 'uncertain';
   date: string;
   location?: {
     lat: number;

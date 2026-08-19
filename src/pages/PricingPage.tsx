@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { PayPalButton } from '../components/PayPalButton';
-import { Check, ShieldCheck, Zap, Sparkles, Crown, Clock, ArrowLeft, UserPlus } from 'lucide-react';
+import { Check, ShieldCheck, Zap, Sparkles, Crown, Clock, ArrowLeft, UserPlus, LayoutDashboard } from 'lucide-react';
 
 interface PricingPageProps {
   onNavigate: (tab: string) => void;
@@ -77,7 +77,32 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate, onGoBack }
             </button>
           </div>
         </div>
-      ) : !isPro && (
+      ) : isPro ? (
+        <div className="max-w-2xl mx-auto p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-950/70 via-[#132c25] to-emerald-950/70 border-2 border-emerald-500/70 text-center space-y-3 shadow-xl">
+          <div className="flex items-center justify-center gap-2 text-sm sm:text-base font-bold text-emerald-300">
+            <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+            <span>Votre statut PRO est Actif ({user.name || 'Membre'}) !</span>
+          </div>
+          <p className="text-xs text-slate-300">
+            Toutes vos fonctionnalités illimitées (scans IA, triage médical d'urgence, journal GPS, alertes météo) sont opérationnelles.
+          </p>
+          <div className="pt-1 flex items-center justify-center gap-3">
+            <button
+              onClick={() => onNavigate('dashboard')}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-[#10b981] hover:brightness-110 text-slate-950 font-display font-extrabold text-xs sm:text-sm shadow-lg flex items-center gap-2 active:scale-95 transition-all cursor-pointer"
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              <span>Accéder à mon Dashboard</span>
+            </button>
+            <button
+              onClick={() => onNavigate('scan')}
+              className="px-4 py-2.5 rounded-xl bg-[#242446] hover:bg-[#2e2e56] border border-slate-700 text-xs text-slate-200 font-semibold transition-all cursor-pointer"
+            >
+              Lancer un Scan IA
+            </button>
+          </div>
+        </div>
+      ) : (
         <div className="max-w-2xl mx-auto p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-1">
           <p className="text-xs sm:text-sm font-semibold text-emerald-300">
             Welcome, {user.name || 'Explorer'}!
@@ -127,17 +152,24 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate, onGoBack }
           {/* Payment Area */}
           <div className="pt-2 border-t border-slate-700/80 space-y-3">
             {isPro ? (
-              <div className="p-4 rounded-2xl bg-emerald-950/60 border border-[#10b981] text-center">
+              <div className="p-4 rounded-2xl bg-emerald-950/60 border border-[#10b981] text-center space-y-2">
                 <span className="text-xs font-bold text-[#10b981]">PRO MEMBERSHIP ACTIVE</span>
-                <p className="text-[11px] text-slate-300 mt-0.5">
+                <p className="text-[11px] text-slate-300">
                   You have full unlimited access to all features.
                 </p>
+                <button
+                  onClick={() => onNavigate('dashboard')}
+                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98 cursor-pointer"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span>Accéder à mon Dashboard</span>
+                </button>
               </div>
             ) : (
               <PayPalButton
                 plan="monthly"
                 price="$4.99/mo"
-                onSuccess={() => onNavigate('scan')}
+                onSuccess={() => onNavigate('dashboard')}
               />
             )}
           </div>
@@ -186,17 +218,24 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate, onGoBack }
           {/* Payment Area */}
           <div className="pt-2 border-t border-slate-700/80 space-y-3">
             {isPro ? (
-              <div className="p-4 rounded-2xl bg-emerald-950/60 border border-[#10b981] text-center">
+              <div className="p-4 rounded-2xl bg-emerald-950/60 border border-[#10b981] text-center space-y-2">
                 <span className="text-xs font-bold text-[#10b981]">PRO MEMBERSHIP ACTIVE</span>
-                <p className="text-[11px] text-slate-300 mt-0.5">
+                <p className="text-[11px] text-slate-300">
                   You have full unlimited access to all features.
                 </p>
+                <button
+                  onClick={() => onNavigate('dashboard')}
+                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98 cursor-pointer"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span>Accéder à mon Dashboard</span>
+                </button>
               </div>
             ) : (
               <PayPalButton
                 plan="annual"
                 price="$29.99/yr"
-                onSuccess={() => onNavigate('scan')}
+                onSuccess={() => onNavigate('dashboard')}
               />
             )}
           </div>

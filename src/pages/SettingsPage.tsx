@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { InstallAppModal } from '../components/InstallAppModal';
 import {
   Settings,
+  LayoutDashboard,
   User,
   CreditCard,
   History,
@@ -157,8 +158,8 @@ export const SettingsPage: React.FC<{ onNavigate: (tab: string) => void; onGoBac
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="space-y-1">
           <h1 className="font-display font-black text-xl sm:text-2xl md:text-3xl text-white flex items-center gap-2">
-            <Settings className="w-6 h-6 text-[#2e86ff] shrink-0" />
-            <span>Member Dashboard &amp; Settings</span>
+            <LayoutDashboard className="w-6 h-6 text-emerald-400 shrink-0" />
+            <span>Dashboard &amp; Paramètres</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-400">
             Manage your entomology profile, billing, history, and smartphone companion app.

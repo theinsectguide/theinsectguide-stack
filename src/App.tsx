@@ -46,8 +46,8 @@ function AppContent() {
       return 'admin-login';
     }
 
-    // Protected settings page requires authentication
-    if (cleanTab === 'settings' && !effectiveIsAuth) {
+    // Protected dashboard / settings page requires authentication
+    if ((cleanTab === 'settings' || cleanTab === 'dashboard') && !effectiveIsAuth) {
       return 'register';
     }
 
@@ -176,7 +176,7 @@ function AppContent() {
         {currentTab === 'login' && <LoginPage onNavigate={handleNavigate} onGoBack={handleGoBack} />}
         {currentTab === 'admin-login' && <AdminLoginPage onNavigate={handleNavigate} onGoBack={handleGoBack} />}
         {currentTab === 'admin-dashboard' && <AdminDashboardPage onNavigate={handleNavigate} onGoBack={handleGoBack} />}
-        {currentTab === 'settings' && <SettingsPage onNavigate={handleNavigate} onGoBack={handleGoBack} />}
+        {(currentTab === 'settings' || currentTab === 'dashboard') && <SettingsPage onNavigate={handleNavigate} onGoBack={handleGoBack} />}
       </main>
 
       {/* Mobile Bottom Tab Bar */}

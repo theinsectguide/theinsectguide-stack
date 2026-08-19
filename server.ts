@@ -303,14 +303,21 @@ app.post('/api/scans/identify', requirePro, async (req: AuthRequest, res: Respon
         user.region
       );
 
-      // Save scan record
+      // Save scan record with full provenance logging
       const scanDoc = await createScan({
         user_id: user._id,
         image_url: image.startsWith('data:') ? image : `data:${mimeType || 'image/jpeg'};base64,${image}`,
         result: scanResult,
         insect_name: scanResult.common_name,
         latin_name: scanResult.latin_name,
+        identified_species: `${scanResult.common_name} (${scanResult.latin_name})`,
         danger_level: scanResult.danger_level,
+        threat_index_display: scanResult.threat_index_display,
+        threat_explanation: scanResult.threat_explanation,
+        vision_model_used: scanResult.vision_model_used || 'claude-sonnet-4-5-20250929',
+        provider_used: scanResult.provider_used || 'anthropic',
+        confidence: scanResult.confidence || 'HIGH',
+        fallback_used: Boolean(scanResult.fallback_used),
         timestamp: new Date().toISOString(),
         location: location || undefined,
         notes: notes || undefined,
@@ -358,7 +365,14 @@ app.post('/api/scans/analyze-pest', requirePro, async (req: AuthRequest, res: Re
       result: pestResult,
       insect_name: pestResult.common_name,
       latin_name: pestResult.latin_name,
+      identified_species: `${pestResult.common_name} (${pestResult.latin_name})`,
       danger_level: pestResult.danger_level,
+      threat_index_display: pestResult.threat_index_display,
+      threat_explanation: pestResult.threat_explanation,
+      vision_model_used: pestResult.vision_model_used || 'claude-sonnet-4-5-20250929',
+      provider_used: pestResult.provider_used || 'anthropic',
+      confidence: pestResult.confidence || 'HIGH',
+      fallback_used: Boolean(pestResult.fallback_used),
       timestamp: new Date().toISOString(),
       notes: `Pest Inspection - Found in: ${location_found || 'Structure'}. Signs: ${damage_observed || 'N/A'}`,
     });

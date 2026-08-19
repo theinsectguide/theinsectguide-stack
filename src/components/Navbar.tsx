@@ -11,6 +11,7 @@ import {
   Shield,
   Bell,
   Settings,
+  LayoutDashboard,
   LogOut,
   Menu,
   X,
@@ -196,16 +197,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               ) : (
                 <button
-                  onClick={() => handleNav('settings')}
-                  className={`p-2 rounded-lg border transition-colors min-w-[38px] min-h-[38px] flex items-center justify-center ${
-                    currentTab === 'settings'
-                      ? 'bg-[#242444] border-slate-600 text-white'
-                      : 'bg-[#1b1b32] border-[#292949] text-slate-300 hover:text-white hover:border-slate-500'
+                  onClick={() => handleNav('dashboard')}
+                  className={`px-3 py-1.5 rounded-xl border transition-all text-xs font-bold flex items-center gap-1.5 shadow-sm min-h-[38px] cursor-pointer active:scale-95 ${
+                    currentTab === 'settings' || currentTab === 'dashboard'
+                      ? 'bg-[#242448] border-emerald-500/80 text-emerald-300 shadow-inner'
+                      : 'bg-[#1b1b32] border-[#292949] text-slate-200 hover:text-white hover:border-emerald-500/50 hover:bg-[#242444]'
                   }`}
-                  title="Account Settings"
-                  aria-label="Account Settings"
+                  title="Dashboard"
+                  aria-label="Dashboard"
                 >
-                  <Settings className="w-4 h-4" />
+                  <LayoutDashboard className="w-4 h-4 text-emerald-400" />
+                  <span className="font-display">Dashboard</span>
                 </button>
               )}
 
@@ -270,6 +272,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             </>
           ) : (
             <>
+              {isAuthenticated && (
+                <button
+                  onClick={() => handleNav('dashboard')}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all mb-1 ${
+                    currentTab === 'dashboard' || currentTab === 'settings'
+                      ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/50'
+                      : 'text-slate-200 bg-[#242446]/60 border border-slate-700/60 hover:bg-[#2e2e56]'
+                  }`}
+                >
+                  <LayoutDashboard className="w-4 h-4 text-emerald-400" />
+                  <span>Dashboard (Mon Compte)</span>
+                </button>
+              )}
               <button
                 onClick={() => handleNav('scan')}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${
