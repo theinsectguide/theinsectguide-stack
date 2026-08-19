@@ -244,7 +244,8 @@ export function calculateDeterministicThreatScore(attrs: {
 export async function identifyInsectWithClaude(
   imageBase64: string,
   mimeType: string = 'image/jpeg',
-  userRegion?: string
+  userRegion?: string,
+  onProgress?: (progress: { percent: number; text: string; model?: string }) => void
 ): Promise<ScanResult> {
   const cleanBase64 = (imageBase64 || '').replace(/^data:image\/[a-zA-Z0-9+]+;base64,/, '').trim();
 
@@ -252,6 +253,9 @@ export async function identifyInsectWithClaude(
     console.warn('[Vision Engine] Missing or empty image payload.');
     return generateTechnicalErrorResult('No image payload was received for analysis.');
   }
+
+  onProgress?.({ percent: 15, text: 'Validating specimen image...' });
+  onProgress?.({ percent: 25, text: 'Preparing image & morphological extraction...' });
 
   let result: RawVisionIdentification | null = null;
   let modelUsed: string | null = null;
@@ -270,6 +274,7 @@ export async function identifyInsectWithClaude(
   if (anthropicApiKey && anthropicApiKey.trim().length > 5 && !anthropicApiKey.includes('...')) {
     try {
       console.log(`[Vision Engine] Direct image transmission to Primary Model: ${primaryClaudeModel}`);
+      onProgress?.({ percent: 30, text: 'Analyzing with Claude Vision...' });
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -345,6 +350,8 @@ export async function identifyInsectWithClaude(
   if (!result && claudeTechnicalFailure) {
     fallbackReason = 'claude_technical_failure';
     console.log(`[Vision Engine] Invoking Gemini 3.7 Flash fallback due to Claude technical failure (${claudeFailureDetails})`);
+    onProgress?.({ percent: 35, text: 'Claude Vision unavailable — switching to backup Vision engine...' });
+    onProgress?.({ percent: 40, text: 'Analyzing with Gemini Vision...' });
 
     const ai = getGenAI();
     if (ai) {
@@ -398,6 +405,11 @@ export async function identifyInsectWithClaude(
     console.warn('[Vision Engine] Both primary (Claude) and fallback (Gemini) vision models technically failed.');
     return generateTechnicalErrorResult('Image analysis failed due to technical processing unavailability.');
   }
+
+  onProgress?.({ percent: 55, text: 'Processing morphological identification...' });
+  onProgress?.({ percent: 70, text: 'Loading species profile & regional distribution...' });
+  onProgress?.({ percent: 82, text: 'Evaluating venom apparatus, stinger morphology & safety...' });
+  onProgress?.({ percent: 92, text: 'Computing deterministic Threat Index...' });
 
   // Explicit log entry per audit specifications
   console.log(
@@ -593,6 +605,8 @@ export function sanitizeAndNormalizeResult(
     'Seek immediate medical assistance if experiencing difficulty breathing, face/throat swelling, or dizziness (anaphylaxis).';
   let legalProtection = raw.legal_protection_status || 'Location dependent (check regional wildlife regulations).';
   let conservationStatus = raw.conservation_status || 'Not evaluated';
+  let activeSeason = raw.active_season || 'Spring through Autumn';
+  let interestingFacts = raw.interesting_facts || 'Insects are essential components of global biodiversity, pollination, and soil aeration.';
 
   if (!isUncertain) {
     // ---------------------------------------------------------------------------
@@ -651,8 +665,12 @@ export function sanitizeAndNormalizeResult(
       emergencyGuidance =
         'Seek urgent emergency medical care if the victim experiences difficulty breathing, swelling of the lips, tongue, face or throat, widespread hives, dizziness, or stings involving the mouth or airway (anaphylaxis).';
       legalProtection =
-        'Domesticated and semi-wild agricultural pollinator. Protected through beekeeping husbandry and regional biodiversity initiatives.';
-      conservationStatus = 'Data Deficient / Managed (IUCN)';
+        'Location dependent — legal protection and beekeeping regulations vary by jurisdiction.';
+      conservationStatus = 'Not established in current reference data';
+      activeSeason =
+        'Active: Year-round within established colonies. Foraging activity varies seasonally with temperature and local climate.';
+      interestingFacts =
+        'Honey bees communicate the location of food sources through the waggle dance. Worker bees are female and perform different roles within the colony, including nursing, guarding and foraging.';
     }
 
     // ---------------------------------------------------------------------------
@@ -804,7 +822,7 @@ export function sanitizeAndNormalizeResult(
     legal_protection_status: legalProtection,
     description: raw.description || 'Specimen morphology evaluated via multi-stage neural vision classifier.',
     habitat: raw.habitat || 'Temperate gardens, woodlands, and residential environments.',
-    active_season: raw.active_season || 'Spring through Autumn',
+    active_season: activeSeason,
     geographic_regions: Array.isArray(raw.geographic_regions) && raw.geographic_regions.length > 0
       ? raw.geographic_regions
       : ['UK', 'US', 'EU', 'CA', 'AU'],
@@ -824,7 +842,7 @@ export function sanitizeAndNormalizeResult(
           estimated_exterminator_cost: raw.pest_control.estimated_exterminator_cost || '$150 - $350',
         }
       : null,
-    interesting_facts: raw.interesting_facts || 'Insects are essential components of global biodiversity, pollination, and soil aeration.',
+    interesting_facts: interestingFacts,
     is_uncertain: isUncertain,
   };
 }

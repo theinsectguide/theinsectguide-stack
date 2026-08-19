@@ -231,7 +231,7 @@ export const ENCYCLOPEDIA_SPECIES: SpeciesEntry[] = [
     when_to_call_emergency: 'Seek urgent emergency medical care if systemic allergic symptoms, breathing difficulties, or swelling of the airway develop.',
     photo_url: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&w=800&q=80',
     look_alikes: ['Mason Bee', 'Mining Bee', 'Syrphid Fly'],
-    fun_fact: 'Honeybees produce royal jelly, propolis, and beeswax in addition to honey, and serve as important agricultural pollinators for numerous fruit, vegetable, nut, and seed crops worldwide.',
+    fun_fact: 'Honey bees communicate the location of food sources through the waggle dance. Worker bees are female and perform different roles within the colony, including nursing, guarding and foraging.',
     country_top_ten: []
   },
   {

@@ -36,6 +36,7 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
+  const [scanStatusText, setScanStatusText] = useState<string>('Validating specimen image...');
   const [currentScan, setCurrentScan] = useState<Scan | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
@@ -142,10 +143,15 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
   };
 
   const getScanProgressStage = (pct: number) => {
-    if (pct < 25) return 'Preparing image & morphological extraction...';
-    if (pct < 60) return 'Analyzing specimen with Claude Sonnet 4.5 Vision...';
-    if (pct < 85) return 'Evaluating venom apparatus, stinger morphology & taxonomy...';
-    if (pct < 100) return 'Computing deterministic threat score & safety protocols...';
+    if (scanStatusText) return scanStatusText;
+    if (pct < 20) return 'Validating specimen image...';
+    if (pct < 30) return 'Preparing image & morphological extraction...';
+    if (pct < 50) return 'Analyzing with Claude Vision...';
+    if (pct < 65) return 'Processing morphological identification...';
+    if (pct < 80) return 'Loading species profile & regional distribution...';
+    if (pct < 90) return 'Evaluating venom apparatus, stinger morphology & safety...';
+    if (pct < 98) return 'Computing deterministic Threat Index...';
+    if (pct < 100) return 'Preparing scan results...';
     return 'Analysis complete!';
   };
 
@@ -158,20 +164,34 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
     }
 
     setLoading(true);
-    setScanProgress(5);
+    setScanProgress(15);
+    setScanStatusText('Validating specimen image...');
     setErrorMsg(null);
+    setCurrentScan(null);
     setSavedToJournal(false);
 
-    // Dynamic progress bar ticker
-    const progressInterval = setInterval(() => {
+    // Initial paced step to preparation
+    const timer1 = setTimeout(() => {
+      setScanProgress((p) => (p < 25 ? 25 : p));
+      setScanStatusText('Preparing image & morphological extraction...');
+    }, 300);
+
+    // Paced step to Claude Vision analysis
+    const timer2 = setTimeout(() => {
+      setScanProgress((p) => (p < 30 ? 30 : p));
+      setScanStatusText('Analyzing with Claude Vision...');
+    }, 700);
+
+    // Vision Analysis stage ticker:
+    // Strictly moves slowly between 30% and 48% (1% every 1.5s, strictly capped at 48%).
+    // It will NEVER advance to 50%, 90%, 96%, or 98% while waiting for Claude / Gemini Vision!
+    const visionWaitingInterval = setInterval(() => {
       setScanProgress((prev) => {
-        if (prev < 30) return prev + Math.floor(Math.random() * 4) + 3;
-        if (prev < 65) return prev + Math.floor(Math.random() * 3) + 2;
-        if (prev < 88) return prev + Math.floor(Math.random() * 2) + 1;
-        if (prev < 96) return Math.min(96, prev + 0.6);
-        return prev;
+        if (prev < 30) return 30;
+        if (prev < 48) return prev + 1;
+        return 48; // HARD CEILING: Never reaches 50%+ during vision API execution
       });
-    }, 150);
+    }, 1500);
 
     try {
       // Get GPS location if user permits
@@ -179,7 +199,7 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
       if (navigator.geolocation) {
         try {
           const pos: any = await new Promise((res, rej) =>
-            navigator.geolocation.getCurrentPosition(res, rej, { timeout: 4000 })
+            navigator.geolocation.getCurrentPosition(res, rej, { timeout: 3000 })
           );
           locData = {
             lat: pos.coords.latitude,
@@ -191,7 +211,8 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
         }
       }
 
-      const res = await fetch('/api/scans/identify', {
+      // Execute stream-enabled identification
+      const res = await fetch('/api/scans/identify-stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -204,23 +225,82 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
         }),
       });
 
-      const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.message || data.error || 'Failed to identify insect.');
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || errData.error || 'Failed to identify insect.');
       }
 
-      // Complete progress smoothly
-      clearInterval(progressInterval);
-      setScanProgress(100);
-      await new Promise((resolve) => setTimeout(resolve, 350));
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      let streamScanDoc: any = null;
+      let streamError: string | null = null;
+      let buffer = '';
 
-      setCurrentScan(data.scan);
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data:')) {
+              const jsonStr = trimmed.replace(/^data:\s*/, '');
+              try {
+                const eventData = JSON.parse(jsonStr);
+                if (eventData.error) {
+                  streamError = eventData.message || eventData.error;
+                }
+                if (eventData.text) {
+                  setScanStatusText(eventData.text);
+                }
+                if (typeof eventData.percent === 'number') {
+                  if (eventData.percent >= 55) {
+                    clearInterval(visionWaitingInterval);
+                  }
+                  setScanProgress(eventData.percent);
+                }
+                if (eventData.scan) {
+                  streamScanDoc = eventData.scan;
+                }
+              } catch (e) {
+                // Ignore parse errors on partial chunks
+              }
+            }
+          }
+        }
+      }
+
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearInterval(visionWaitingInterval);
+
+      if (streamError) {
+        throw new Error(streamError);
+      }
+
+      if (!streamScanDoc) {
+        throw new Error('Analysis completed without scan results.');
+      }
+
+      setScanProgress(100);
+      setScanStatusText('Analysis complete!');
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      setCurrentScan(streamScanDoc);
       await refreshUser();
     } catch (err: any) {
-      clearInterval(progressInterval);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearInterval(visionWaitingInterval);
+      setScanProgress(0);
       setErrorMsg(err.message || 'An error occurred during analysis.');
     } finally {
-      clearInterval(progressInterval);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearInterval(visionWaitingInterval);
       setLoading(false);
     }
   };
@@ -359,7 +439,7 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
                   {loading ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin text-white" />
-                      <span>Analyzing with Claude Vision...</span>
+                      <span className="truncate">{scanStatusText || 'Analyzing with Claude Vision...'}</span>
                     </>
                   ) : (
                     <>

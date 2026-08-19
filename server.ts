@@ -349,6 +349,91 @@ app.post('/api/scans/identify', requirePro, async (req: AuthRequest, res: Respon
   }
 });
 
+app.post('/api/scans/identify-stream', requirePro, async (req: AuthRequest, res: Response) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders?.();
+
+  const sendEvent = (data: any) => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+  };
+
+  try {
+    const user = req.user!;
+    const { image, mimeType, location, notes } = req.body;
+
+    if (!image) {
+      sendEvent({ error: 'error', message: 'Image data is required for identification.' });
+      return res.end();
+    }
+
+    sendEvent({ percent: 15, text: 'Validating specimen image...' });
+    sendEvent({ percent: 25, text: 'Preparing image & morphological extraction...' });
+
+    try {
+      const scanResult = await identifyInsectWithClaude(
+        image,
+        mimeType || 'image/jpeg',
+        user.region,
+        (progress) => {
+          sendEvent(progress);
+        }
+      );
+
+      sendEvent({ percent: 98, text: 'Preparing scan results...' });
+
+      // Save scan record with full provenance logging
+      const scanDoc = await createScan({
+        user_id: user._id,
+        image_url: image.startsWith('data:') ? image : `data:${mimeType || 'image/jpeg'};base64,${image}`,
+        result: scanResult,
+        insect_name: scanResult.common_name,
+        latin_name: scanResult.latin_name,
+        identified_species: `${scanResult.common_name} (${scanResult.latin_name})`,
+        danger_level: scanResult.danger_level,
+        threat_index_display: scanResult.threat_index_display,
+        threat_explanation: scanResult.threat_explanation,
+        vision_model_used: scanResult.vision_model_used || null,
+        provider_used: scanResult.provider_used || null,
+        confidence: scanResult.confidence || null,
+        analysis_status: scanResult.analysis_status || 'success',
+        identification_status: scanResult.identification_status || null,
+        fallback_used: Boolean(scanResult.fallback_used),
+        fallback_reason: scanResult.fallback_reason || null,
+        timestamp: new Date().toISOString(),
+        location: location || undefined,
+        notes: notes || undefined,
+      });
+
+      sendEvent({
+        percent: 100,
+        text: 'Analysis complete!',
+        success: true,
+        scan: scanDoc,
+      });
+      return res.end();
+    } catch (identifyError: any) {
+      if (identifyError.message === 'no_insect_detected') {
+        sendEvent({
+          error: 'no_insect_detected',
+          message: 'No identifiable insect, bug or arachnid was detected in this photo. Please try again with a closer, well-lit image.',
+        });
+        return res.end();
+      }
+      throw identifyError;
+    }
+  } catch (err: any) {
+    console.error('Scan stream error:', err);
+    sendEvent({
+      error: 'error',
+      message: 'Identification service temporarily unavailable. Please try again.',
+      details: err.message,
+    });
+    return res.end();
+  }
+});
+
 app.post('/api/scans/analyze-pest', requirePro, async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
