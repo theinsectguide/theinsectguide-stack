@@ -17,28 +17,32 @@ const memoryStore = {
   push_subscriptions: new Map<string, any>(),
 };
 
-// Strict durable disk persistence files
+// Strict durable disk persistence files with triple-redundancy
 const PRIMARY_DATA_FILE = path.join(process.cwd(), 'database_store.json');
+const BACKUP_DATA_FILE = path.join(process.cwd(), 'database_store.backup.json');
 const LEGACY_DATA_FILE = path.join(process.cwd(), '.data_store.json');
 
 function loadLocalStore() {
   try {
-    let raw: string | null = null;
-    if (fs.existsSync(PRIMARY_DATA_FILE)) {
-      raw = fs.readFileSync(PRIMARY_DATA_FILE, 'utf-8');
-    } else if (fs.existsSync(LEGACY_DATA_FILE)) {
-      raw = fs.readFileSync(LEGACY_DATA_FILE, 'utf-8');
+    const filesToTry = [PRIMARY_DATA_FILE, BACKUP_DATA_FILE, LEGACY_DATA_FILE];
+    for (const filePath of filesToTry) {
+      if (fs.existsSync(filePath)) {
+        try {
+          const raw = fs.readFileSync(filePath, 'utf-8');
+          if (raw && raw.trim().length > 0) {
+            const data = JSON.parse(raw);
+            if (data.users) Object.entries(data.users).forEach(([k, v]) => memoryStore.users.set(k, v as UserDoc));
+            if (data.scans) Object.entries(data.scans).forEach(([k, v]) => memoryStore.scans.set(k, v as ScanDoc));
+            if (data.journal_entries) Object.entries(data.journal_entries).forEach(([k, v]) => memoryStore.journal_entries.set(k, v as JournalEntryDoc));
+            if (data.alerts) Object.entries(data.alerts).forEach(([k, v]) => memoryStore.alerts.set(k, v as AlertDoc));
+            if (data.transactions) Object.entries(data.transactions).forEach(([k, v]) => memoryStore.transactions.set(k, v as TransactionDoc));
+          }
+        } catch (e) {
+          console.warn(`[Database Persistence] Warning reading ${filePath}:`, e);
+        }
+      }
     }
-
-    if (raw) {
-      const data = JSON.parse(raw);
-      if (data.users) Object.entries(data.users).forEach(([k, v]) => memoryStore.users.set(k, v as UserDoc));
-      if (data.scans) Object.entries(data.scans).forEach(([k, v]) => memoryStore.scans.set(k, v as ScanDoc));
-      if (data.journal_entries) Object.entries(data.journal_entries).forEach(([k, v]) => memoryStore.journal_entries.set(k, v as JournalEntryDoc));
-      if (data.alerts) Object.entries(data.alerts).forEach(([k, v]) => memoryStore.alerts.set(k, v as AlertDoc));
-      if (data.transactions) Object.entries(data.transactions).forEach(([k, v]) => memoryStore.transactions.set(k, v as TransactionDoc));
-      console.log(`[Database Persistence] Loaded ${memoryStore.users.size} users, ${memoryStore.scans.size} scans, ${memoryStore.journal_entries.size} journals from disk storage.`);
-    }
+    console.log(`[Database Persistence] Protected and loaded ${memoryStore.users.size} users, ${memoryStore.scans.size} scans, ${memoryStore.journal_entries.size} journals from durable disk storage.`);
   } catch (err) {
     console.error('[Database Persistence] Error loading store cache from disk:', err);
   }
@@ -54,9 +58,15 @@ export function saveLocalStore() {
       transactions: Object.fromEntries(memoryStore.transactions),
       last_persisted_at: new Date().toISOString(),
     };
-    fs.writeFileSync(PRIMARY_DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    const jsonString = JSON.stringify(data, null, 2);
+    // Write primary store
+    fs.writeFileSync(PRIMARY_DATA_FILE, jsonString, 'utf-8');
+    // Write backup store
+    fs.writeFileSync(BACKUP_DATA_FILE, jsonString, 'utf-8');
+    // Write legacy safety store
+    fs.writeFileSync(LEGACY_DATA_FILE, jsonString, 'utf-8');
   } catch (err) {
-    console.error('[Database Persistence] Error writing database_store.json to disk:', err);
+    console.error('[Database Persistence] Error writing database_store to disk:', err);
   }
 }
 

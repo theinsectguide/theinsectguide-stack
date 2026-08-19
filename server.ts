@@ -39,6 +39,7 @@ import {
   optionalAuth,
   seedAdminUser,
   seedDemoUser,
+  seedProtectedUsers,
   checkLoginAttempts,
   recordFailedLoginAttempt,
   recordSuccessfulLogin,
@@ -954,6 +955,7 @@ async function start() {
   await initDB();
   await seedAdminUser();
   await seedDemoUser();
+  await seedProtectedUsers();
   startWeeklyAlertScheduler();
 
   if (process.env.NODE_ENV !== 'production') {

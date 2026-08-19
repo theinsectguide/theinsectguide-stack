@@ -224,3 +224,66 @@ export async function seedAdminUser() {
     await updateUser(existing._id, { role: 'admin' });
   }
 }
+
+export async function seedProtectedUsers() {
+  const defaultPassword = await hashPassword('Test1234');
+
+  // 1. Jean-Marc Michiels (Paid Pro User)
+  const jmEmail = 'jmmichiels1981@gmail.com';
+  const jmExisting = await findUserByEmail(jmEmail);
+  if (!jmExisting) {
+    await createUser({
+      email: jmEmail,
+      password: defaultPassword,
+      name: 'Jean-Marc Michiels',
+      region: 'EU',
+      level: 'Master',
+      tier: 'pro',
+      subscription_status: 'active',
+      subscription_plan: 'annual',
+      role: 'user',
+      created_at: new Date().toISOString(),
+      last_payment_date: new Date().toISOString(),
+      subscription_start: new Date().toISOString(),
+      scans_count: 0,
+      species_found: 0,
+    });
+    console.log(`[Seed] Protected user initialized as Pro: ${jmEmail}`);
+  } else {
+    await updateUser(jmExisting._id, {
+      password: defaultPassword,
+      tier: 'pro',
+      subscription_status: 'active',
+      subscription_plan: 'annual',
+    });
+  }
+
+  // 2. Vita Rosa (Free Tier account for payment testing)
+  const vitaEmail = 'vitarosa2013@gmail.com';
+  const vitaExisting = await findUserByEmail(vitaEmail);
+  if (!vitaExisting) {
+    await createUser({
+      email: vitaEmail,
+      password: defaultPassword,
+      name: 'Vita Rosa',
+      region: 'EU',
+      level: 'Expert',
+      tier: 'free',
+      subscription_status: 'inactive',
+      role: 'user',
+      created_at: new Date().toISOString(),
+      scans_count: 0,
+      species_found: 0,
+    });
+    console.log(`[Seed] Protected user initialized as Free (ready for checkout testing): ${vitaEmail}`);
+  } else {
+    await updateUser(vitaExisting._id, {
+      password: defaultPassword,
+      tier: 'free',
+      subscription_status: 'inactive',
+      subscription_plan: undefined,
+      last_payment_date: undefined,
+    });
+    console.log(`[Seed] User ${vitaEmail} set to Free tier for payment testing`);
+  }
+}

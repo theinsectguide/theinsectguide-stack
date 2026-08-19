@@ -1,5 +1,67 @@
 {
-  "users": {},
+  "users": {
+    "6a85847509f68d3e6384eee6": {
+      "email": "contact@theinsectguide.com",
+      "password": "$2b$10$YDatvYBJVo5m7a8vp9tV9uLa3.d1RDI2sM7eRlhWwCt6TfKm8dE52",
+      "name": "Head Entomologist & Admin",
+      "region": "UK",
+      "level": "Master",
+      "tier": "pro",
+      "subscription_status": "active",
+      "role": "admin",
+      "created_at": "2026-08-19T10:24:53.335Z",
+      "scans_count": 0,
+      "species_found": 0,
+      "_id": "6a85847509f68d3e6384eee6"
+    },
+    "6a85847509f68d3e6384eee7": {
+      "email": "demo@theinsectguide.com",
+      "password": "$2b$10$09eCescLA9dSCVitdicaA.Xl4LeRA1hd.EC7INRH3QDb6J1Q1WLoG",
+      "name": "Demo Entomologist",
+      "region": "UK",
+      "level": "Expert",
+      "tier": "pro",
+      "subscription_status": "active",
+      "subscription_plan": "annual",
+      "role": "user",
+      "created_at": "2026-08-19T10:24:53.429Z",
+      "last_payment_date": "2026-08-19T10:24:53.429Z",
+      "scans_count": 0,
+      "species_found": 0,
+      "_id": "6a85847509f68d3e6384eee7"
+    },
+    "6a85847509f68d3e6384eee8": {
+      "email": "jmmichiels1981@gmail.com",
+      "password": "$2b$10$4nkCL1tH7B6uc.WAjrCRouMceeaOaZB/3o1TJAdcgaA/LJnGqX5cS",
+      "name": "Jean-Marc Michiels",
+      "region": "EU",
+      "level": "Master",
+      "tier": "pro",
+      "subscription_status": "active",
+      "subscription_plan": "annual",
+      "role": "user",
+      "created_at": "2026-08-19T10:30:00.000Z",
+      "last_payment_date": "2026-08-19T10:30:00.000Z",
+      "subscription_start": "2026-08-19T10:30:00.000Z",
+      "scans_count": 0,
+      "species_found": 0,
+      "_id": "6a85847509f68d3e6384eee8"
+    },
+    "6a85847509f68d3e6384eee9": {
+      "email": "vitarosa2013@gmail.com",
+      "password": "$2b$10$ytf/NXnWSqpfk90DPISc5up3ATKJfQzmzm2i1d1PlQ6X/P3HbGw2e",
+      "name": "Vita Rosa",
+      "region": "EU",
+      "level": "Expert",
+      "tier": "free",
+      "subscription_status": "inactive",
+      "role": "user",
+      "created_at": "2026-08-19T10:35:00.000Z",
+      "scans_count": 0,
+      "species_found": 0,
+      "_id": "6a85847509f68d3e6384eee9"
+    }
+  },
   "scans": {
     "6a8562a35ea313ccc01b0196": {
       "user_id": "test_stress_audit_user_99",
@@ -50,5 +112,5 @@
   "journal_entries": {},
   "alerts": {},
   "transactions": {},
-  "last_persisted_at": "2026-08-19T08:00:35.499Z"
+  "last_persisted_at": "2026-08-19T11:06:21.356Z"
 }
