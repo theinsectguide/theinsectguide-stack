@@ -16,7 +16,7 @@
     },
     "6a85847509f68d3e6384eee7": {
       "email": "demo@theinsectguide.com",
-      "password": "$2b$10$q/JM4rEsLAvohPPNpHYRg.l4C8KrDpIREWCDEdXpM5Nisb7cPxPLS",
+      "password": "$2b$10$waKxqGpHP4737aqvTLs0K.RW.ON5jhoJtTJBiN4PUMiRGvNgk.h/W",
       "name": "Demo Entomologist",
       "region": "UK",
       "level": "Expert",
@@ -32,13 +32,13 @@
     },
     "6a85847509f68d3e6384eee8": {
       "email": "jmmichiels1981@gmail.com",
-      "password": "$2b$10$PvnE80XWI523FujwgQ1nIuqB/NVL2n2etrgZL/344//UNK9bW4KEO",
+      "password": "$2b$10$SjS1882w5IqFsxVpdmljH.mcIt5oBaJSi72xwvPWhSvBfRkBxlb3i",
       "name": "Jean-Marc Michiels",
       "region": "EU",
       "level": "Master",
       "tier": "pro",
       "subscription_status": "active",
-      "subscription_plan": "annual",
+      "subscription_plan": "monthly",
       "role": "user",
       "created_at": "2026-08-19T10:30:00.000Z",
       "last_payment_date": "2026-08-19T10:30:00.000Z",
@@ -49,7 +49,7 @@
     },
     "6a85847509f68d3e6384eee9": {
       "email": "vitarosa2013@gmail.com",
-      "password": "$2b$10$PvnE80XWI523FujwgQ1nIuqB/NVL2n2etrgZL/344//UNK9bW4KEO",
+      "password": "$2b$10$SjS1882w5IqFsxVpdmljH.mcIt5oBaJSi72xwvPWhSvBfRkBxlb3i",
       "name": "Vita Rosa",
       "region": "EU",
       "level": "Expert",
@@ -111,6 +111,19 @@
   },
   "journal_entries": {},
   "alerts": {},
-  "transactions": {},
-  "last_persisted_at": "2026-08-19T11:11:08.691Z"
+  "transactions": {
+    "tx_jmmichiels_monthly_001": {
+      "_id": "tx_jmmichiels_monthly_001",
+      "user_id": "6a85847509f68d3e6384eee8",
+      "order_id": "PAYPAL-MO-499-JMM",
+      "capture_id": "CAP-MO-499-JMM",
+      "payer_email": "jmmichiels1981@gmail.com",
+      "amount": "4.99",
+      "currency": "USD",
+      "plan": "monthly",
+      "status": "COMPLETED",
+      "created_at": "2026-08-19T15:45:13.053Z"
+    }
+  },
+  "last_persisted_at": "2026-08-19T15:46:04.438Z"
 }
