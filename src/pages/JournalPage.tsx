@@ -526,14 +526,14 @@ export const JournalPage: React.FC<{ onNavigate: (tab: string) => void; onGoBack
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                 <div className="p-2.5 rounded-xl bg-[#141424] border border-slate-800 text-center space-y-0.5">
                   <span className="text-[10px] text-slate-400 block">Sting Hazard</span>
-                  <span className={`font-bold ${selectedEntry.scan_result.can_sting ? 'text-amber-400' : 'text-emerald-400'}`}>
-                    {selectedEntry.scan_result.can_sting ? '⚠️ Yes (Venomous)' : '✓ None'}
+                  <span className={`font-bold ${selectedEntry.scan_result.can_sting === null ? 'text-slate-400' : selectedEntry.scan_result.can_sting ? 'text-amber-400' : 'text-emerald-400'}`}>
+                    {selectedEntry.scan_result.can_sting === null ? '❓ Unknown' : selectedEntry.scan_result.can_sting ? '⚠️ Yes (Venomous)' : '✓ None'}
                   </span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-[#141424] border border-slate-800 text-center space-y-0.5">
                   <span className="text-[10px] text-slate-400 block">Bite Hazard</span>
-                  <span className={`font-bold ${selectedEntry.scan_result.can_bite ? 'text-amber-400' : 'text-emerald-400'}`}>
-                    {selectedEntry.scan_result.can_bite ? '⚠️ Yes (Can Bite)' : '✓ None'}
+                  <span className={`font-bold ${selectedEntry.scan_result.can_bite === null ? 'text-slate-400' : selectedEntry.scan_result.can_bite ? 'text-amber-400' : 'text-emerald-400'}`}>
+                    {selectedEntry.scan_result.can_bite === null ? '❓ Unknown' : selectedEntry.scan_result.can_bite ? '⚠️ Yes (Can Bite)' : '✓ None'}
                   </span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-[#141424] border border-slate-800 text-center space-y-0.5">

@@ -90,7 +90,9 @@ export const ShareCardModal: React.FC<ShareCardModalProps> = ({
             <div className="bg-black/30 p-2 rounded-lg border border-slate-800">
               <span className="text-slate-400 block text-[10px]">Sting / Bite Hazard</span>
               <span className="font-semibold text-slate-200">
-                {scanResult.can_sting && scanResult.can_bite
+                {scanResult.can_sting === null || scanResult.can_bite === null || scanResult.is_uncertain
+                  ? 'Unknown — Caution'
+                  : scanResult.can_sting && scanResult.can_bite
                   ? 'Stings & Bites'
                   : scanResult.can_sting
                   ? 'Venomous Stinger'

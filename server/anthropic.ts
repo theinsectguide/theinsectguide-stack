@@ -237,27 +237,37 @@ export function calculateDeterministicThreatScore(attrs: {
 
 /**
  * PRIMARY VISION ENGINE:
- * 1. Claude Sonnet 4.5 Vision: claude-sonnet-4-5-20250929 (Anthropic API)
- * 2. Fallback: Gemini 3.7 Flash Vision (Google GenAI) ONLY if Claude is unavailable or fails.
+ * 1. Claude Sonnet 4.5 Vision: claude-sonnet-4-5-20250929 (Anthropic API) - PRIMARY
+ * 2. Fallback: Gemini 3.7 Flash Vision (Google GenAI) ONLY if Claude has a technical failure.
+ * 3. Never call Gemini if Claude succeeds with legitimate LOW confidence / taxonomic uncertainty.
  */
 export async function identifyInsectWithClaude(
   imageBase64: string,
   mimeType: string = 'image/jpeg',
   userRegion?: string
 ): Promise<ScanResult> {
-  const cleanBase64 = imageBase64.replace(/^data:image\/[a-zA-Z0-9+]+;base64,/, '');
+  const cleanBase64 = (imageBase64 || '').replace(/^data:image\/[a-zA-Z0-9+]+;base64,/, '').trim();
+
+  if (!cleanBase64) {
+    console.warn('[Vision Engine] Missing or empty image payload.');
+    return generateTechnicalErrorResult('No image payload was received for analysis.');
+  }
 
   let result: RawVisionIdentification | null = null;
-  let modelUsed = '';
-  let providerUsed = '';
+  let modelUsed: string | null = null;
+  let providerUsed: string | null = null;
   let fallbackUsed = false;
+  let fallbackReason: string | null = null;
 
   // ---------------------------------------------------------------------------
   // STEP 1: PRIMARY VISION MODEL — CLAUDE SONNET 4.5 VISION (claude-sonnet-4-5-20250929)
   // ---------------------------------------------------------------------------
   const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+  const primaryClaudeModel = 'claude-sonnet-4-5-20250929';
+  let claudeTechnicalFailure = false;
+  let claudeFailureDetails = '';
+
   if (anthropicApiKey && anthropicApiKey.trim().length > 5 && !anthropicApiKey.includes('...')) {
-    const primaryClaudeModel = 'claude-sonnet-4-5-20250929';
     try {
       console.log(`[Vision Engine] Direct image transmission to Primary Model: ${primaryClaudeModel}`);
       const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -301,26 +311,41 @@ export async function identifyInsectWithClaude(
           if (parsed.error === 'no_insect_detected') {
             throw new Error('no_insect_detected');
           }
+          // Claude successfully analyzed the image
           result = parsed;
           modelUsed = primaryClaudeModel;
           providerUsed = 'anthropic';
           fallbackUsed = false;
+          fallbackReason = null;
+        } else {
+          claudeTechnicalFailure = true;
+          claudeFailureDetails = 'Failed to parse JSON from Claude response';
         }
       } else {
         const errText = await response.text();
+        claudeTechnicalFailure = true;
+        claudeFailureDetails = `HTTP ${response.status}: ${errText}`;
         console.warn(`[Vision Engine] Claude Sonnet 4.5 API response ${response.status}:`, errText);
       }
     } catch (err: any) {
       if (err.message === 'no_insect_detected') throw err;
+      claudeTechnicalFailure = true;
+      claudeFailureDetails = err.message || 'Network/runtime exception';
       console.warn(`[Vision Engine] Primary Claude Sonnet 4.5 attempt failed:`, err.message);
     }
+  } else {
+    claudeTechnicalFailure = true;
+    claudeFailureDetails = 'ANTHROPIC_API_KEY is not configured or invalid';
+    console.log('[Vision Engine] Claude API key absent or unconfigured.');
   }
 
   // ---------------------------------------------------------------------------
-  // STEP 2: APPROVED FALLBACK VISION MODEL — GEMINI 3.7 FLASH (ONLY ON CLAUDE FAILURE)
+  // STEP 2: FALLBACK TO GEMINI 3.7 FLASH (ONLY ON CLAUDE TECHNICAL FAILURE)
   // ---------------------------------------------------------------------------
-  if (!result) {
-    console.log('[Vision Engine] Fallback triggered: Invoking Gemini 3.7 Flash Vision');
+  if (!result && claudeTechnicalFailure) {
+    fallbackReason = 'claude_technical_failure';
+    console.log(`[Vision Engine] Invoking Gemini 3.7 Flash fallback due to Claude technical failure (${claudeFailureDetails})`);
+
     const ai = getGenAI();
     if (ai) {
       const fallbackModel = 'gemini-3.7-flash';
@@ -356,6 +381,7 @@ export async function identifyInsectWithClaude(
             modelUsed = fallbackModel;
             providerUsed = 'google';
             fallbackUsed = true;
+            fallbackReason = 'claude_technical_failure';
           }
         }
       } catch (err: any) {
@@ -366,19 +392,19 @@ export async function identifyInsectWithClaude(
   }
 
   // ---------------------------------------------------------------------------
-  // STEP 3: CONTROLLED UNCERTAINTY HANDLING (NEVER GUESS OR RANDOM-PICK)
+  // STEP 3: IF BOTH CLAUDE AND GEMINI ENCOUNTER TECHNICAL FAILURE
   // ---------------------------------------------------------------------------
   if (!result) {
-    console.warn('[Vision Engine] All vision models unavailable. Generating controlled uncertainty response.');
-    return generateUncertaintyResult('Identification service temporarily unconfirmed. Please provide a clearer macro photo.');
+    console.warn('[Vision Engine] Both primary (Claude) and fallback (Gemini) vision models technically failed.');
+    return generateTechnicalErrorResult('Image analysis failed due to technical processing unavailability.');
   }
 
   // Explicit log entry per audit specifications
   console.log(
-    `[Vision Engine Audit Log] vision_model_used: ${modelUsed} | provider_used: ${providerUsed} | confidence: ${result.confidence || 'MEDIUM'} | fallback_used: ${fallbackUsed} | identified_species: ${result.common_name} (${result.latin_name}) | timestamp: ${new Date().toISOString()}`
+    `[Vision Engine Audit Log] vision_model_used: ${modelUsed} | provider_used: ${providerUsed} | confidence: ${result.confidence || 'MEDIUM'} | fallback_used: ${fallbackUsed} | fallback_reason: ${fallbackReason} | identified_species: ${result.common_name} (${result.latin_name}) | timestamp: ${new Date().toISOString()}`
   );
 
-  return sanitizeAndNormalizeResult(result, modelUsed, providerUsed, fallbackUsed, userRegion);
+  return sanitizeAndNormalizeResult(result, modelUsed, providerUsed, fallbackUsed, fallbackReason, userRegion);
 }
 
 /**
@@ -394,6 +420,7 @@ export async function analyzePestWithClaude(
   let modelUsed = '';
   let providerUsed = '';
   let fallbackUsed = false;
+  let fallbackReason: string | null = null;
 
   const PEST_PROMPT = `${TAXONOMIC_VISION_PROMPT}\n\nSPECIALIZED PEST CONTEXT:
 Location found: ${pestDetails?.location_found || 'Structure / Household'}.
@@ -447,6 +474,7 @@ Prioritize structural damage evaluation, DIY vs exterminator feasibility, and ch
           modelUsed = primaryClaudeModel;
           providerUsed = 'anthropic';
           fallbackUsed = false;
+          fallbackReason = null;
         }
       }
     } catch (err: any) {
@@ -454,8 +482,9 @@ Prioritize structural damage evaluation, DIY vs exterminator feasibility, and ch
     }
   }
 
-  // 2. Fallback: Gemini 3.7 Flash ONLY if Claude fails
+  // 2. Fallback: Gemini 3.7 Flash ONLY if Claude fails technically
   if (!result) {
+    fallbackReason = 'claude_technical_failure';
     const ai = getGenAI();
     if (ai) {
       try {
@@ -487,6 +516,7 @@ Prioritize structural damage evaluation, DIY vs exterminator feasibility, and ch
             modelUsed = fallbackModel;
             providerUsed = 'google';
             fallbackUsed = true;
+            fallbackReason = 'claude_technical_failure';
           }
         }
       } catch (err: any) {
@@ -496,10 +526,10 @@ Prioritize structural damage evaluation, DIY vs exterminator feasibility, and ch
   }
 
   if (!result) {
-    return generateUncertaintyResult('Pest analysis could not be determined with certainty. Please upload a clear photo of the specimen or damage.');
+    return generateTechnicalErrorResult('Pest analysis could not be determined due to technical service unavailability.');
   }
 
-  return sanitizeAndNormalizeResult(result, modelUsed, providerUsed, fallbackUsed);
+  return sanitizeAndNormalizeResult(result, modelUsed, providerUsed, fallbackUsed, fallbackReason);
 }
 
 function extractAndValidateJson(text: string): RawVisionIdentification | null {
@@ -520,11 +550,12 @@ function extractAndValidateJson(text: string): RawVisionIdentification | null {
 /**
  * SPECIES-FIRST SAFETY SEPARATION & SANITIZATION PIPELINE
  */
-function sanitizeAndNormalizeResult(
+export function sanitizeAndNormalizeResult(
   raw: RawVisionIdentification,
-  modelUsed: string,
-  providerUsed: string,
-  fallbackUsed: boolean,
+  modelUsed: string | null = 'claude-sonnet-4-5-20250929',
+  providerUsed: string | null = 'anthropic',
+  fallbackUsed: boolean = false,
+  fallbackReason: string | null = null,
   userRegion?: string
 ): ScanResult {
   const commonName = (raw.common_name || 'Unidentified Specimen').trim();
@@ -549,12 +580,13 @@ function sanitizeAndNormalizeResult(
 
   // 2. Extract Base Structural Properties
   let status: 'safe' | 'dangerous' | 'venomous' | 'pest' | 'protected' | 'uncertain' = isUncertain ? 'uncertain' : 'safe';
-  let canSting = Boolean(raw.can_sting);
-  let canBite = Boolean(raw.can_bite);
-  let stingerType: 'barbed' | 'smooth' | 'none' = raw.stinger_type || (canSting ? 'smooth' : 'none');
-  let canStingRepeatedly = Boolean(raw.can_sting_repeatedly);
+  // UNCERTAIN SPECIES SAFETY RULE: If uncertain, can_sting and can_bite MUST BE NULL (Never assume harmless)
+  let canSting: boolean | null = isUncertain ? null : Boolean(raw.can_sting);
+  let canBite: boolean | null = isUncertain ? null : Boolean(raw.can_bite);
+  let stingerType: 'barbed' | 'smooth' | 'none' | null = isUncertain ? null : raw.stinger_type || (canSting ? 'smooth' : 'none');
+  let canStingRepeatedly: boolean | null = isUncertain ? null : Boolean(raw.can_sting_repeatedly);
   let petChildHazard: 'Low' | 'Moderate' | 'High' = raw.pet_child_hazard || (isUncertain ? 'Moderate' : 'Low');
-  let petChildExplanation = raw.pet_child_explanation || '';
+  let petChildExplanation = raw.pet_child_explanation || (isUncertain ? 'Species identification is uncertain. Exercise caution and do not handle unknown specimens.' : '');
   let firstAid = raw.first_aid || 'Wash area thoroughly with clean cold water and soap. Apply a cold compress.';
   let emergencyGuidance =
     raw.when_to_call_emergency ||
@@ -562,159 +594,161 @@ function sanitizeAndNormalizeResult(
   let legalProtection = raw.legal_protection_status || 'Location dependent (check regional wildlife regulations).';
   let conservationStatus = raw.conservation_status || 'Not evaluated';
 
-  // ---------------------------------------------------------------------------
-  // SPECIES SAFETY PROFILE LOOKUP: European Hornet (Vespa crabro)
-  // ---------------------------------------------------------------------------
-  if (lowerLatin.includes('vespa crabro') || lowerCommon.includes('european hornet')) {
-    status = 'dangerous';
-    canSting = true;
-    canBite = true;
-    stingerType = 'smooth';
-    canStingRepeatedly = true;
-    petChildHazard = 'Moderate';
-    petChildExplanation =
-      'Hornets deliver a painful sting with repeat attack capability. Keep children and curious pets away from flying corridors and nests.';
-    firstAid =
-      'Wash sting site immediately with soap and water. Apply an ice pack wrapped in a cloth for 15 minutes. Take an over-the-counter antihistamine if swelling occurs. Do NOT attempt to scrape out a stinger unless visibly left behind.';
-    emergencyGuidance =
-      'Call emergency services (999/911/112) immediately if stung in the mouth or throat, or if signs of anaphylaxis develop (wheezing, lip/tongue swelling, severe dizziness, full-body hives).';
-    legalProtection =
-      'Location dependent — Specially protected under nature conservation law in Germany (§44 BNatSchG; nests cannot be destroyed without permit), but not legally protected in the UK or North America.';
-    conservationStatus = 'Least Concern (IUCN)';
-  }
+  if (!isUncertain) {
+    // ---------------------------------------------------------------------------
+    // SPECIES SAFETY PROFILE LOOKUP: European Hornet (Vespa crabro)
+    // ---------------------------------------------------------------------------
+    if (lowerLatin.includes('vespa crabro') || lowerCommon.includes('european hornet')) {
+      status = 'dangerous';
+      canSting = true;
+      canBite = true;
+      stingerType = 'smooth';
+      canStingRepeatedly = true;
+      petChildHazard = 'Moderate';
+      petChildExplanation =
+        'Hornets deliver a painful sting with repeat attack capability. Keep children and curious pets away from flying corridors and nests.';
+      firstAid =
+        'Wash sting site immediately with soap and water. Apply an ice pack wrapped in a cloth for 15 minutes. Take an over-the-counter antihistamine if swelling occurs. Do NOT attempt to scrape out a stinger unless visibly left behind.';
+      emergencyGuidance =
+        'Call emergency services (999/911/112) immediately if stung in the mouth or throat, or if signs of anaphylaxis develop (wheezing, lip/tongue swelling, severe dizziness, full-body hives).';
+      legalProtection =
+        'Location dependent — Specially protected under nature conservation law in Germany (§44 BNatSchG; nests cannot be destroyed without permit), but not legally protected in the UK or North America.';
+      conservationStatus = 'Least Concern (IUCN)';
+    }
 
-  // ---------------------------------------------------------------------------
-  // SPECIES SAFETY PROFILE LOOKUP: Asian Hornet (Vespa velutina)
-  // ---------------------------------------------------------------------------
-  else if (lowerLatin.includes('vespa velutina') || lowerCommon.includes('asian hornet') || lowerCommon.includes('yellow-legged hornet')) {
-    status = 'dangerous';
-    canSting = true;
-    canBite = true;
-    stingerType = 'smooth';
-    canStingRepeatedly = true;
-    petChildHazard = 'High';
-    petChildExplanation =
-      'Aggressive defensive swarming behavior near nests. Invasive apex predator of honeybees.';
-    firstAid =
-      'Wash the sting site immediately. Apply cold packs. If stung in the face/neck or multiple times, seek medical assessment. Report sighting to local environmental authorities (DEFRA in UK).';
-    legalProtection =
-      'Invasive species of high concern across the UK and EU. Mandatory reporting required.';
-  }
+    // ---------------------------------------------------------------------------
+    // SPECIES SAFETY PROFILE LOOKUP: Asian Hornet (Vespa velutina)
+    // ---------------------------------------------------------------------------
+    else if (lowerLatin.includes('vespa velutina') || lowerCommon.includes('asian hornet') || lowerCommon.includes('yellow-legged hornet')) {
+      status = 'dangerous';
+      canSting = true;
+      canBite = true;
+      stingerType = 'smooth';
+      canStingRepeatedly = true;
+      petChildHazard = 'High';
+      petChildExplanation =
+        'Aggressive defensive swarming behavior near nests. Invasive apex predator of honeybees.';
+      firstAid =
+        'Wash the sting site immediately. Apply cold packs. If stung in the face/neck or multiple times, seek medical assessment. Report sighting to local environmental authorities (DEFRA in UK).';
+      legalProtection =
+        'Invasive species of high concern across the UK and EU. Mandatory reporting required.';
+    }
 
-  // ---------------------------------------------------------------------------
-  // SPECIES SAFETY PROFILE LOOKUP: Honeybee (Apis mellifera)
-  // ---------------------------------------------------------------------------
-  else if (lowerLatin.includes('apis mellifera') || (lowerCommon.includes('honey') && lowerCommon.includes('bee'))) {
-    status = 'safe';
-    canSting = true;
-    canBite = false;
-    stingerType = 'barbed';
-    canStingRepeatedly = false;
-    petChildHazard = 'Low';
-    petChildExplanation =
-      'Docile keystone pollinator. Only stings in direct self-defense or when accidentally stepped on. Stings can trigger allergic reactions in sensitive individuals.';
-    firstAid =
-      'Promptly scrape off the barbed stinger using a fingernail or flat plastic card without squeezing the venom sac. Wash area with cold water and soap, and apply an ice pack for 10-15 minutes.';
-    emergencyGuidance =
-      'Seek emergency medical care if the victim has a known bee venom allergy (anaphylaxis) or receives multiple stings (10+).';
-    legalProtection =
-      'Domesticated and semi-wild agricultural pollinator. Protected through beekeeping husbandry and regional biodiversity initiatives.';
-    conservationStatus = 'Data Deficient / Managed (IUCN)';
-  }
+    // ---------------------------------------------------------------------------
+    // SPECIES SAFETY PROFILE LOOKUP: Honeybee (Apis mellifera)
+    // ---------------------------------------------------------------------------
+    else if (lowerLatin.includes('apis mellifera') || (lowerCommon.includes('honey') && lowerCommon.includes('bee'))) {
+      status = 'safe';
+      canSting = true;
+      canBite = false;
+      stingerType = 'barbed';
+      canStingRepeatedly = false;
+      petChildHazard = 'Low';
+      petChildExplanation =
+        'Docile keystone pollinator. Only stings in direct self-defense or when accidentally stepped on. Stings can trigger allergic reactions in sensitive individuals.';
+      firstAid =
+        'Promptly scrape off the barbed stinger using a fingernail or flat plastic card without squeezing the venom sac. Wash area with cold water and soap, and apply an ice pack for 10-15 minutes.';
+      emergencyGuidance =
+        'Seek urgent emergency medical care if the victim experiences difficulty breathing, swelling of the lips, tongue, face or throat, widespread hives, dizziness, or stings involving the mouth or airway (anaphylaxis).';
+      legalProtection =
+        'Domesticated and semi-wild agricultural pollinator. Protected through beekeeping husbandry and regional biodiversity initiatives.';
+      conservationStatus = 'Data Deficient / Managed (IUCN)';
+    }
 
-  // ---------------------------------------------------------------------------
-  // SPECIES SAFETY PROFILE LOOKUP: Hoverflies (Syrphidae)
-  // ---------------------------------------------------------------------------
-  else if (lowerLatin.includes('syrph') || lowerCommon.includes('hoverfly') || lowerCommon.includes('hover fly')) {
-    status = 'safe';
-    canSting = false;
-    canBite = false;
-    stingerType = 'none';
-    canStingRepeatedly = false;
-    petChildHazard = 'Low';
-    petChildExplanation =
-      'Completely harmless to humans, children, and pets. Lacks a stinger or biting mouthparts; is an essential garden pollinator.';
-    firstAid = 'Harmless species. No first aid required.';
-    emergencyGuidance = 'No medical risk whatsoever.';
-    legalProtection = 'Beneficial garden pollinator. No special commercial restrictions.';
-    conservationStatus = 'Least Concern (IUCN)';
-  }
+    // ---------------------------------------------------------------------------
+    // SPECIES SAFETY PROFILE LOOKUP: Hoverflies (Syrphidae)
+    // ---------------------------------------------------------------------------
+    else if (lowerLatin.includes('syrph') || lowerCommon.includes('hoverfly') || lowerCommon.includes('hover fly')) {
+      status = 'safe';
+      canSting = false;
+      canBite = false;
+      stingerType = 'none';
+      canStingRepeatedly = false;
+      petChildHazard = 'Low';
+      petChildExplanation =
+        'Non-venomous pollinator lacking a stinger and venom-delivery apparatus. Hoverflies do not pose a stinging threat to humans or pets.';
+      firstAid = 'Non-venomous species. No specific medical first aid required.';
+      emergencyGuidance = 'Hoverflies lack a venomous stinger or biting apparatus and pose no envenomation risk.';
+      legalProtection = 'Beneficial garden pollinator. No special commercial restrictions.';
+      conservationStatus = 'Least Concern (IUCN)';
+    }
 
-  // ---------------------------------------------------------------------------
-  // SPECIES SAFETY PROFILE LOOKUP: Yellowjackets (Vespula spp. / Dolichovespula)
-  // ---------------------------------------------------------------------------
-  else if (lowerLatin.includes('vespula') || lowerLatin.includes('dolichovespula') || lowerCommon.includes('yellowjacket') || lowerCommon.includes('common wasp') || lowerCommon.includes('wasp')) {
-    status = 'dangerous';
-    canSting = true;
-    canBite = true;
-    stingerType = 'smooth';
-    canStingRepeatedly = true;
-    petChildHazard = 'Moderate';
-    petChildExplanation =
-      'Can sting repeatedly and aggressively defend underground or wall void nests. Scavenges sugary foods around picnic areas.';
-    firstAid =
-      'Wash sting site with soap and water. Apply an ice pack wrapped in a towel for 15 minutes. Take oral antihistamine or apply hydrocortisone cream for itching.';
-    emergencyGuidance =
-      'Emergency medical attention required if stung in the mouth/throat, or if systemic symptoms appear (respiratory distress, widespread rash, dizziness).';
-  }
+    // ---------------------------------------------------------------------------
+    // SPECIES SAFETY PROFILE LOOKUP: Yellowjackets (Vespula spp. / Dolichovespula)
+    // ---------------------------------------------------------------------------
+    else if (lowerLatin.includes('vespula') || lowerLatin.includes('dolichovespula') || lowerCommon.includes('yellowjacket') || lowerCommon.includes('common wasp') || lowerCommon.includes('wasp')) {
+      status = 'dangerous';
+      canSting = true;
+      canBite = true;
+      stingerType = 'smooth';
+      canStingRepeatedly = true;
+      petChildHazard = 'Moderate';
+      petChildExplanation =
+        'Can sting repeatedly and aggressively defend underground or wall void nests. Scavenges sugary foods around picnic areas.';
+      firstAid =
+        'Wash sting site with soap and water. Apply an ice pack wrapped in a towel for 15 minutes. Take oral antihistamine or apply hydrocortisone cream for itching.';
+      emergencyGuidance =
+        'Emergency medical attention required if stung in the mouth/throat, or if systemic symptoms appear (respiratory distress, widespread rash, dizziness).';
+    }
 
-  // ---------------------------------------------------------------------------
-  // SPECIES SAFETY PROFILE LOOKUP: Bumblebees (Bombus spp.)
-  // ---------------------------------------------------------------------------
-  else if (lowerLatin.includes('bombus') || lowerCommon.includes('bumblebee') || lowerCommon.includes('bumble bee')) {
-    status = 'safe';
-    canSting = true;
-    canBite = false;
-    stingerType = 'smooth';
-    canStingRepeatedly = true;
-    petChildHazard = 'Low';
-    petChildExplanation =
-      'Gentle, non-aggressive pollinator. Only stings if severely crushed, stepped on, or nest is directly disturbed.';
-    firstAid =
-      'Wash sting site with soap and water. Apply a cool compress to soothe localized pain.';
-    emergencyGuidance =
-      'Emergency response required only if individual experiences systemic allergic shock (anaphylaxis).';
-  }
+    // ---------------------------------------------------------------------------
+    // SPECIES SAFETY PROFILE LOOKUP: Bumblebees (Bombus spp.)
+    // ---------------------------------------------------------------------------
+    else if (lowerLatin.includes('bombus') || lowerCommon.includes('bumblebee') || lowerCommon.includes('bumble bee')) {
+      status = 'safe';
+      canSting = true;
+      canBite = false;
+      stingerType = 'smooth';
+      canStingRepeatedly = true;
+      petChildHazard = 'Low';
+      petChildExplanation =
+        'Gentle, non-aggressive pollinator. Only stings if severely crushed, stepped on, or nest is directly disturbed.';
+      firstAid =
+        'Wash sting site with soap and water. Apply a cool compress to soothe localized pain.';
+      emergencyGuidance =
+        'Seek urgent emergency medical care if systemic allergic symptoms, breathing difficulties, or swelling of the airway develop.';
+    }
 
-  // ---------------------------------------------------------------------------
-  // SPECIES SAFETY PROFILE LOOKUP: Spiders & Ticks
-  // ---------------------------------------------------------------------------
-  else if (lowerLatin.includes('latrodectus') || lowerCommon.includes('black widow')) {
-    status = 'venomous';
-    canSting = false;
-    canBite = true;
-    stingerType = 'none';
-    petChildHazard = 'High';
-    petChildExplanation =
-      'Possesses potent alpha-latrotoxin venom. High medical risk for young children, elderly, and small pets.';
-    firstAid =
-      'Wash bite with antiseptic soap. Keep limb elevated and immobilized. Apply a cool pack. Seek prompt medical care; do NOT cut the wound or attempt venom suction.';
-    emergencyGuidance =
-      'Go to nearest Emergency Department immediately. Symptoms include severe abdominal cramping, muscle rigidity, sweating, and rapid heart rate.';
-  } else if (lowerLatin.includes('loxosceles') || lowerCommon.includes('brown recluse')) {
-    status = 'venomous';
-    canSting = false;
-    canBite = true;
-    stingerType = 'none';
-    petChildHazard = 'High';
-    petChildExplanation =
-      'Possesses cytotoxic sphingomyelinase D venom capable of causing necrotic skin lesions. High hazard.';
-    firstAid =
-      'Clean bite site thoroughly. Apply ice compress to slow enzymatic tissue breakdown. Immobilize area and seek medical physician evaluation.';
-    emergencyGuidance =
-      'Seek emergency medical attention if bite shows spreading dark necrosis, ulceration, fever, or systemic chills.';
-  } else if (lowerLatin.includes('ixodes') || lowerCommon.includes('tick')) {
-    status = 'dangerous';
-    canSting = false;
-    canBite = true;
-    stingerType = 'none';
-    petChildHazard = 'High';
-    petChildExplanation =
-      'Vector for Lyme disease, Babesiosis, and Anaplasmosis in humans and domestic dogs.';
-    firstAid =
-      'Use fine-tipped tweezers to grasp tick directly at skin level. Pull steadily upward without twisting or crushing the abdomen. Disinfect bite with alcohol. Save tick in a sealed container for medical identification.';
-    emergencyGuidance =
-      'Consult a physician if expanding target/bullseye rash (Erythema migrans), fever, joint fatigue, or facial palsy develops within 3 to 30 days.';
+    // ---------------------------------------------------------------------------
+    // SPECIES SAFETY PROFILE LOOKUP: Spiders & Ticks
+    // ---------------------------------------------------------------------------
+    else if (lowerLatin.includes('latrodectus') || lowerCommon.includes('black widow')) {
+      status = 'venomous';
+      canSting = false;
+      canBite = true;
+      stingerType = 'none';
+      petChildHazard = 'High';
+      petChildExplanation =
+        'Possesses potent alpha-latrotoxin venom. High medical risk for young children, elderly, and small pets.';
+      firstAid =
+        'Wash bite with antiseptic soap. Keep limb elevated and immobilized. Apply a cool pack. Seek prompt medical care; do NOT cut the wound or attempt venom suction.';
+      emergencyGuidance =
+        'Go to nearest Emergency Department immediately. Symptoms include severe abdominal cramping, muscle rigidity, sweating, and rapid heart rate.';
+    } else if (lowerLatin.includes('loxosceles') || lowerCommon.includes('brown recluse')) {
+      status = 'venomous';
+      canSting = false;
+      canBite = true;
+      stingerType = 'none';
+      petChildHazard = 'High';
+      petChildExplanation =
+        'Possesses cytotoxic sphingomyelinase D venom capable of causing necrotic skin lesions. High hazard.';
+      firstAid =
+        'Clean bite site thoroughly. Apply ice compress to slow enzymatic tissue breakdown. Immobilize area and seek medical physician evaluation.';
+      emergencyGuidance =
+        'Seek emergency medical attention if bite shows spreading dark necrosis, ulceration, fever, or systemic chills.';
+    } else if (lowerLatin.includes('ixodes') || lowerCommon.includes('tick')) {
+      status = 'dangerous';
+      canSting = false;
+      canBite = true;
+      stingerType = 'none';
+      petChildHazard = 'High';
+      petChildExplanation =
+        'Vector for Lyme disease, Babesiosis, and Anaplasmosis in humans and domestic dogs.';
+      firstAid =
+        'Use fine-tipped tweezers to grasp tick directly at skin level. Pull steadily upward without twisting or crushing the abdomen. Disinfect bite with alcohol. Save tick in a sealed container for medical identification.';
+      emergencyGuidance =
+        'Consult a physician if expanding target/bullseye rash (Erythema migrans), fever, joint fatigue, or facial palsy develops within 3 to 30 days.';
+    }
   }
 
   // 3. DETERMINISTIC THREAT ENGINE: Calculate Threat Index (0-10) or return null for uncertain
@@ -726,10 +760,10 @@ function sanitizeAndNormalizeResult(
     dangerLevel = calculateDeterministicThreatScore({
       latin_name: latinName,
       common_name: commonName,
-      can_sting: canSting,
-      can_bite: canBite,
-      stinger_type: stingerType,
-      can_sting_repeatedly: canStingRepeatedly,
+      can_sting: Boolean(canSting),
+      can_bite: Boolean(canBite),
+      stinger_type: (stingerType as 'barbed' | 'smooth' | 'none') || 'none',
+      can_sting_repeatedly: Boolean(canStingRepeatedly),
       status: status,
       confidence: confidence,
       is_uncertain: false,
@@ -757,9 +791,12 @@ function sanitizeAndNormalizeResult(
     pet_child_hazard: petChildHazard,
     pet_child_explanation: petChildExplanation,
     confidence: confidence,
+    analysis_status: 'success',
+    identification_status: isUncertain ? 'uncertain' : 'confirmed',
     vision_model_used: modelUsed,
     provider_used: providerUsed,
     fallback_used: fallbackUsed,
+    fallback_reason: fallbackReason,
     visual_evidence: Array.isArray(raw.visual_evidence) ? raw.visual_evidence : [],
     possible_lookalikes: Array.isArray(raw.possible_lookalikes) ? raw.possible_lookalikes : [],
     identification_notes: raw.identification_notes || '',
@@ -792,6 +829,47 @@ function sanitizeAndNormalizeResult(
   };
 }
 
+export function generateTechnicalErrorResult(message: string): ScanResult {
+  return {
+    common_name: 'Image Analysis Failed',
+    latin_name: '',
+    status: 'uncertain',
+    danger_level: null,
+    threat_index_display: 'N/A',
+    threat_explanation: 'Threat level cannot be determined due to a technical analysis error.',
+    can_sting: null,
+    can_bite: null,
+    stinger_type: null,
+    can_sting_repeatedly: null,
+    dangerous_to_children: false,
+    dangerous_to_pets: false,
+    pet_child_hazard: 'Moderate',
+    pet_child_explanation: 'Image processing could not complete. Do not handle unknown specimens directly.',
+    confidence: null,
+    analysis_status: 'technical_error',
+    identification_status: null,
+    vision_model_used: null,
+    provider_used: null,
+    fallback_used: true,
+    fallback_reason: 'claude_and_gemini_technical_failure',
+    visual_evidence: ['Technical failure: Both primary (Claude) and secondary (Gemini) neural vision services were unable to process this image.'],
+    possible_lookalikes: [],
+    identification_notes: message,
+    conservation_status: 'Not evaluated',
+    legal_protection_status: 'Not evaluated',
+    description: "We couldn't analyze this image. Please try again or upload another photo.",
+    habitat: 'Unknown without valid image analysis.',
+    active_season: 'Unknown',
+    geographic_regions: ['UK', 'US', 'CA', 'AU', 'EU'],
+    look_alikes: ['Please provide a sharp, well-lit macro photograph.'],
+    first_aid: 'If bitten or stung, wash the area thoroughly with soap and water. Apply a cold compress. Seek immediate emergency care (999/911/112) if experiencing respiratory distress or facial swelling.',
+    when_to_call_emergency: 'Call emergency services (999/911/112) immediately if you experience breathing difficulty, facial swelling, or dizziness.',
+    pest_control: null,
+    interesting_facts: 'Clear macro photos showing head, antennae, and abdomen patterns ensure highest classification precision.',
+    is_uncertain: true,
+  };
+}
+
 function generateUncertaintyResult(message: string): ScanResult {
   return {
     common_name: 'Identification Uncertain',
@@ -800,18 +878,21 @@ function generateUncertaintyResult(message: string): ScanResult {
     danger_level: null,
     threat_index_display: 'N/A',
     threat_explanation: 'Threat level cannot be determined because the species could not be identified with sufficient confidence.',
-    can_sting: false,
-    can_bite: false,
-    stinger_type: 'none',
-    can_sting_repeatedly: false,
+    can_sting: null,
+    can_bite: null,
+    stinger_type: null,
+    can_sting_repeatedly: null,
     dangerous_to_children: false,
     dangerous_to_pets: false,
     pet_child_hazard: 'Moderate',
     pet_child_explanation: 'Species could not be confirmed with high confidence. Exercise general caution and do not handle unknown insects with bare hands.',
     confidence: 'LOW',
-    vision_model_used: 'uncertainty_fallback',
-    provider_used: 'system',
-    fallback_used: true,
+    analysis_status: 'success',
+    identification_status: 'uncertain',
+    vision_model_used: 'claude-sonnet-4-5-20250929',
+    provider_used: 'anthropic',
+    fallback_used: false,
+    fallback_reason: null,
     visual_evidence: ['Visual features are ambiguous or lighting was insufficient for confident diagnostic confirmation.'],
     possible_lookalikes: ['Vespidae (Wasps/Hornets)', 'Apidae (Bees)', 'Syrphidae (Hoverflies)'],
     identification_notes: message,

@@ -22,24 +22,27 @@ export interface ScanResult {
   common_name: string;
   latin_name: string;
   status: 'safe' | 'dangerous' | 'venomous' | 'pest' | 'protected' | 'uncertain';
-  danger_level: number | null; // 0-10 or null if uncertain
+  danger_level: number | null; // 0-10 or null if uncertain/error
   threat_index_display?: string; // e.g. "N/A" or "6 / 10"
   threat_explanation?: string;
-  can_sting: boolean;
-  can_bite: boolean;
+  can_sting: boolean | null;
+  can_bite: boolean | null;
   dangerous_to_children: boolean;
   dangerous_to_pets: boolean;
   pet_child_hazard?: 'Low' | 'Moderate' | 'High';
   pet_child_explanation?: string;
-  confidence?: 'HIGH' | 'MEDIUM' | 'LOW';
-  vision_model_used?: string;
-  provider_used?: string;
+  confidence?: 'HIGH' | 'MEDIUM' | 'LOW' | null;
+  analysis_status?: 'success' | 'technical_error';
+  identification_status?: 'confirmed' | 'uncertain' | null;
+  vision_model_used?: string | null;
+  provider_used?: string | null;
   fallback_used?: boolean;
+  fallback_reason?: string | null;
   visual_evidence?: string[];
   possible_lookalikes?: string[];
   identification_notes?: string;
-  stinger_type?: 'barbed' | 'smooth' | 'none';
-  can_sting_repeatedly?: boolean;
+  stinger_type?: 'barbed' | 'smooth' | 'none' | null;
+  can_sting_repeatedly?: boolean | null;
   conservation_status?: string;
   legal_protection_status?: string;
   description: string;
@@ -73,10 +76,13 @@ export interface Scan {
   danger_level: number | null;
   threat_index_display?: string;
   threat_explanation?: string;
-  vision_model_used?: string;
-  provider_used?: string;
-  confidence?: 'HIGH' | 'MEDIUM' | 'LOW';
+  vision_model_used?: string | null;
+  provider_used?: string | null;
+  confidence?: 'HIGH' | 'MEDIUM' | 'LOW' | null;
   fallback_used?: boolean;
+  fallback_reason?: string | null;
+  analysis_status?: 'success' | 'technical_error';
+  identification_status?: 'confirmed' | 'uncertain' | null;
   timestamp: string;
   location?: {
     lat: number;

@@ -230,7 +230,7 @@ export const ENCYCLOPEDIA_SPECIES: SpeciesEntry[] = [
     habitat: 'Gardens, agricultural orchards, meadows, and managed apiaries.',
     description: 'Indispensable pollinator insect characterized by fuzzy amber-brown coloration and pollen baskets on hind legs. Stings only in defense of the colony.',
     first_aid: 'Scrape stinger off immediately with a flat card. Wash with soap and water, then ice.',
-    when_to_call_emergency: 'Call emergency services only if systemic allergic reaction (anaphylaxis) develops.',
+    when_to_call_emergency: 'Seek urgent emergency medical care if systemic allergic symptoms, breathing difficulties, or swelling of the airway develop.',
     photo_url: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&w=800&q=80',
     look_alikes: ['Mason Bee', 'Mining Bee', 'Syrphid Fly'],
     fun_fact: 'Honeybees produce royal jelly, propolis, and beeswax in addition to honey, pollinating 1 out of every 3 bites of human food.',

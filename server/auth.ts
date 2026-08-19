@@ -269,7 +269,7 @@ export async function seedProtectedUsers() {
       region: 'EU',
       level: 'Expert',
       tier: 'free',
-      subscription_status: 'inactive',
+      subscription_status: 'none',
       role: 'user',
       created_at: new Date().toISOString(),
       scans_count: 0,
@@ -280,7 +280,7 @@ export async function seedProtectedUsers() {
     await updateUser(vitaExisting._id, {
       password: defaultPassword,
       tier: 'free',
-      subscription_status: 'inactive',
+      subscription_status: 'none',
       subscription_plan: undefined,
       last_payment_date: undefined,
     });
