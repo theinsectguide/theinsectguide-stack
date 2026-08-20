@@ -79,6 +79,30 @@ export const EncyclopediaPage: React.FC<{ onNavigate: (tab: string) => void; onG
     }
   };
 
+  const formatRegions = (regionsList?: string[]): string => {
+    if (!regionsList || regionsList.length === 0) return 'Global / Unspecified';
+    return regionsList.join(' · ');
+  };
+
+  const formatEmergencyCare = (species: Species): string => {
+    const text = (species.when_to_call_emergency || '').trim();
+    const lower = text.toLowerCase();
+
+    const isNoneValue = lower === 'none' || lower === 'none.' || !text;
+    const isConfirmedNonVenomous =
+      !species.can_sting &&
+      (species.danger_level <= 1 ||
+        species.category.toLowerCase() === 'useful' ||
+        species.category.toLowerCase() === 'harmless' ||
+        species.category.toLowerCase() === 'protected');
+
+    if (isNoneValue && isConfirmedNonVenomous) {
+      return 'No emergency response is normally required for contact with this non-stinging, non-venomous insect.';
+    }
+
+    return text || 'No specific emergency protocol recorded.';
+  };
+
   const getCategoryIcon = (category: string) => {
     switch (category.toLowerCase()) {
       case 'venomous':
@@ -276,15 +300,10 @@ export const EncyclopediaPage: React.FC<{ onNavigate: (tab: string) => void; onG
                       <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
                         {sp.category}
                       </span>
-                      <div className="flex flex-wrap gap-1 mt-0.5">
-                        {sp.regions.map((reg) => (
-                          <span
-                            key={reg}
-                            className="px-1.5 py-0.2 rounded bg-purple-950/60 border border-purple-800/50 text-[9px] font-mono text-purple-300"
-                          >
-                            {reg}
-                          </span>
-                        ))}
+                      <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                        <span className="text-[10px] font-mono font-bold text-purple-300">
+                          {formatRegions(sp.regions)}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -392,17 +411,13 @@ export const EncyclopediaPage: React.FC<{ onNavigate: (tab: string) => void; onG
 
             {/* Geographical Presence */}
             <div className="p-3 rounded-xl bg-[#141424] border border-slate-800 flex items-center justify-between text-xs">
-              <span className="text-slate-400 text-[11px] flex items-center gap-1.5">
+              <span className="text-slate-400 text-[11px] flex items-center gap-1.5 shrink-0">
                 <Globe className="w-3.5 h-3.5 text-[#2e86ff]" />
                 Geographic Presence:
               </span>
-              <div className="flex flex-wrap gap-1">
-                {activeSpecies.regions.map((reg) => (
-                  <span key={reg} className="px-2 py-0.5 rounded bg-[#28284c] text-purple-200 font-mono text-[10px] font-bold">
-                    {reg}
-                  </span>
-                ))}
-              </div>
+              <span className="font-mono text-[11px] sm:text-xs font-bold text-purple-200 tracking-wide text-right">
+                {formatRegions(activeSpecies.regions)}
+              </span>
             </div>
 
             {/* Description & Biological Profile */}
@@ -437,7 +452,7 @@ export const EncyclopediaPage: React.FC<{ onNavigate: (tab: string) => void; onG
                   <Skull className="w-3.5 h-3.5 text-rose-400" />
                   When to Seek Immediate Emergency Medical Care:
                 </strong>
-                <p>{activeSpecies.when_to_call_emergency}</p>
+                <p>{formatEmergencyCare(activeSpecies)}</p>
               </div>
             </div>
 
