@@ -103,6 +103,35 @@ export const EncyclopediaPage: React.FC<{ onNavigate: (tab: string) => void; onG
     return text || 'No specific emergency protocol recorded.';
   };
 
+  const getSafetyLevel = (species: Species): 'Low' | 'Moderate' | 'High' => {
+    if (species.pet_child_hazard) return species.pet_child_hazard;
+    if (species.danger_level >= 7 || species.category === 'Venomous') return 'High';
+    if (species.danger_level >= 4 || species.dangerous_to_children || species.dangerous_to_pets) return 'Moderate';
+    return 'Low';
+  };
+
+  const formatChildSafety = (species: Species) => {
+    const level = getSafetyLevel(species);
+    if (level === 'High') {
+      return { label: '⚠️ High Caution', color: 'text-rose-400' };
+    }
+    if (level === 'Moderate') {
+      return { label: '⚠️ Moderate Caution', color: 'text-amber-400' };
+    }
+    return { label: '✓ Safe', color: 'text-emerald-400' };
+  };
+
+  const formatPetSafety = (species: Species) => {
+    const level = getSafetyLevel(species);
+    if (level === 'High') {
+      return { label: '⚠️ High Risk', color: 'text-rose-400' };
+    }
+    if (level === 'Moderate') {
+      return { label: '⚠️ Moderate Risk', color: 'text-amber-400' };
+    }
+    return { label: '✓ Safe', color: 'text-emerald-400' };
+  };
+
   const getCategoryIcon = (category: string) => {
     switch (category.toLowerCase()) {
       case 'venomous':
@@ -397,14 +426,14 @@ export const EncyclopediaPage: React.FC<{ onNavigate: (tab: string) => void; onG
               </div>
               <div className="p-3 rounded-xl bg-[#141424] border border-slate-800 text-center space-y-0.5">
                 <span className="text-[10px] text-slate-400 block">Child Safety</span>
-                <span className={`font-bold ${activeSpecies.dangerous_to_children ? 'text-rose-400' : 'text-emerald-400'}`}>
-                  {activeSpecies.dangerous_to_children ? '⚠️ High Caution' : '✓ Safe'}
+                <span className={`font-bold ${formatChildSafety(activeSpecies).color}`}>
+                  {formatChildSafety(activeSpecies).label}
                 </span>
               </div>
               <div className="p-3 rounded-xl bg-[#141424] border border-slate-800 text-center space-y-0.5">
                 <span className="text-[10px] text-slate-400 block">Pet Safety</span>
-                <span className={`font-bold ${activeSpecies.dangerous_to_pets ? 'text-rose-400' : 'text-emerald-400'}`}>
-                  {activeSpecies.dangerous_to_pets ? '⚠️ Toxic Risk' : '✓ Safe'}
+                <span className={`font-bold ${formatPetSafety(activeSpecies).color}`}>
+                  {formatPetSafety(activeSpecies).label}
                 </span>
               </div>
             </div>

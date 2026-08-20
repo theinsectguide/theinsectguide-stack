@@ -136,6 +136,8 @@ export interface Species {
   can_bite: boolean;
   dangerous_to_children: boolean;
   dangerous_to_pets: boolean;
+  pet_child_hazard?: 'Low' | 'Moderate' | 'High';
+  pet_child_explanation?: string;
   regions: ('UK' | 'US' | 'CA' | 'AU' | 'EU' | 'Other')[];
   active_seasons: ('Spring' | 'Summer' | 'Autumn' | 'Winter')[];
   habitat: string;
