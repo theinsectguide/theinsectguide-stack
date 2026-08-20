@@ -320,14 +320,25 @@ export const ScanPage: React.FC<ScanPageProps> = ({ onNavigate, onGoBack }) => {
           status: journalStatus,
           notes: journalNotes || 'Logged from AI scan.',
           location: currentScan.location,
+          scan_result: currentScan.result,
+          photo_url: currentScan.image_url,
+          insect_name: currentScan.insect_name || currentScan.result?.common_name,
+          latin_name: currentScan.latin_name || currentScan.result?.latin_name,
+          danger_level: currentScan.danger_level ?? currentScan.result?.danger_level,
+          status_type: currentScan.result?.status || 'safe',
         }),
       });
 
       if (res.ok) {
         setSavedToJournal(true);
+        await refreshUser();
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        setErrorMsg(errJson.error || 'Failed to save specimen to journal.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to save to journal:', err);
+      setErrorMsg('Failed to save observation to journal. Please try again.');
     } finally {
       setSavingJournal(false);
     }

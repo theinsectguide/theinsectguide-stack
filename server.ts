@@ -505,29 +505,37 @@ app.get('/api/scans/:id', requirePro, async (req: AuthRequest, res: Response) =>
 
 app.post('/api/scans/:id/save-to-journal', requirePro, async (req: AuthRequest, res: Response) => {
   try {
+    const user = req.user!;
     const scan = await getScanById(req.params.id);
-    if (!scan) return res.status(404).json({ error: 'Scan not found.' });
-    if (scan.user_id !== req.user!._id) return res.status(403).json({ error: 'Unauthorized.' });
+    const { status, notes, location, scan_result, photo_url, insect_name, latin_name, danger_level, status_type } = req.body;
 
-    const { status, notes, location } = req.body;
+    const finalScanResult = scan_result || scan?.result;
+    const finalPhoto = photo_url || scan?.image_url;
+    const finalName = insect_name || scan?.insect_name || finalScanResult?.common_name || 'Specimen';
+    const finalLatin = latin_name || scan?.latin_name || finalScanResult?.latin_name || 'Insecta sp.';
+    const finalDanger = typeof danger_level === 'number' ? danger_level : (scan?.danger_level ?? finalScanResult?.danger_level ?? 0);
+    const finalStatusType = status_type || scan?.result?.status || finalScanResult?.status || 'safe';
+    const finalLocation = location || scan?.location;
+    const finalNotes = notes || scan?.notes || 'Saved from AI identification scan.';
 
     const journal = await createJournalEntry({
-      user_id: req.user!._id,
-      scan_id: scan._id,
-      photo_url: scan.image_url,
-      insect_name: scan.insect_name,
-      latin_name: scan.latin_name,
-      danger_level: scan.danger_level,
-      status_type: scan.result?.status || 'safe',
+      user_id: user._id,
+      scan_id: scan?._id || req.params.id,
+      photo_url: finalPhoto,
+      insect_name: finalName,
+      latin_name: finalLatin,
+      danger_level: finalDanger,
+      status_type: finalStatusType,
       date: new Date().toISOString(),
-      location: location || scan.location,
-      notes: notes || scan.notes || 'Saved from AI identification scan.',
+      location: finalLocation,
+      notes: finalNotes,
       status: ['found', 'observed', 'reported', 'photographed'].includes(status) ? status : 'found',
-      scan_result: scan.result,
+      scan_result: finalScanResult,
     });
 
     return res.json({ success: true, entry: journal });
-  } catch (err) {
+  } catch (err: any) {
+    console.error('Failed to save to journal:', err);
     return res.status(500).json({ error: 'Failed to save to journal.' });
   }
 });

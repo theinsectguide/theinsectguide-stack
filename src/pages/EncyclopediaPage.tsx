@@ -44,7 +44,23 @@ export const EncyclopediaPage: React.FC<{ onNavigate: (tab: string) => void; onG
     fetch('/api/encyclopedia')
       .then((res) => res.json())
       .then((data) => {
-        setSpeciesList(data.species || []);
+        const list: Species[] = data.species || [];
+        setSpeciesList(list);
+
+        const targetId = sessionStorage.getItem('selected_encyclopedia_species_id');
+        if (targetId) {
+          sessionStorage.removeItem('selected_encyclopedia_species_id');
+          const target = list.find((s) => s.id === targetId || s.latin_name.toLowerCase().includes(targetId.toLowerCase()) || s.common_name.toLowerCase().includes(targetId.toLowerCase()));
+          if (target) {
+            setActiveSpecies(target);
+          }
+        }
+
+        const targetQuery = sessionStorage.getItem('encyclopedia_search_query');
+        if (targetQuery) {
+          sessionStorage.removeItem('encyclopedia_search_query');
+          setSearchQuery(targetQuery);
+        }
       })
       .catch((err) => console.warn('Encyclopedia fetch warning:', err))
       .finally(() => setLoading(false));
