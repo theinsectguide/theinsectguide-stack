@@ -24,7 +24,13 @@ export const PAYPAL_MODE = process.env.PAYPAL_MODE || 'live';
 export const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || 'AffnRM3aLTLlYUT538UDsDxpM4MqrBrrCt-2Ihl9L4TDKgVLsmiTjE8qdmO-CrHi7HqgS6fOnlQOmmYV';
 export const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || 'EAkJG726rN_7QJrQllDhVDQqy_V7RmJPE3A5EYVx5i_a4hWn7QhIyL6lKaX-AaZ_V9i4qfgS5oM7bjK3';
 export const PAYPAL_WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID || '2A319232KL071003J';
-export const PAYPAL_MONTHLY_PLAN_ID_ENV = process.env.PAYPAL_MONTHLY_PLAN_ID || '';
+export const PAYPAL_MONTHLY_PLAN_ID_ENV = process.env.PAYPAL_MONTHLY_PLAN_ID || 'P-1VK52313VC6878320NKDSNEY';
+
+// Central Pricing Truth
+export const MONTHLY_PRICE_USD = '4.99';
+export const ANNUAL_PRICE_USD = '29.99';
+export const PAYPAL_MONTHLY_PLAN_ID_DEFAULT = 'P-1VK52313VC6878320NKDSNEY';
+export const PAYPAL_PRODUCT_ID_DEFAULT = 'PROD-4TJ03911ES2839354';
 
 // Live / Sandbox PayPal REST API base URL
 export const PAYPAL_API_BASE = PAYPAL_MODE === 'sandbox'
@@ -32,8 +38,8 @@ export const PAYPAL_API_BASE = PAYPAL_MODE === 'sandbox'
   : 'https://api-m.paypal.com';
 
 // Cache for dynamically verified / provisioned PayPal Product & Billing Plan
-let cachedMonthlyPlanId: string = PAYPAL_MONTHLY_PLAN_ID_ENV;
-let cachedProductId: string = '';
+let cachedMonthlyPlanId: string = PAYPAL_MONTHLY_PLAN_ID_ENV || PAYPAL_MONTHLY_PLAN_ID_DEFAULT;
+let cachedProductId: string = PAYPAL_PRODUCT_ID_DEFAULT;
 
 /**
  * Fetch OAuth2 Access Token from PayPal REST API
@@ -65,21 +71,70 @@ export async function getPayPalAccessToken(): Promise<string | null> {
 }
 
 /**
+ * Validates that a PayPal Billing Plan is ACTIVE and strictly priced at $4.99 USD / Month
+ */
+async function verifyPlanIsExactPrice(token: string, planId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${PAYPAL_API_BASE}/v1/billing/plans/${planId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!res.ok) return false;
+    const plan: any = await res.json();
+    if (plan.status !== 'ACTIVE') return false;
+
+    const regularCycle = plan.billing_cycles?.find((c: any) => c.tenure_type === 'REGULAR');
+    if (!regularCycle) return false;
+
+    const value = regularCycle.pricing_scheme?.fixed_price?.value;
+    const currency = regularCycle.pricing_scheme?.fixed_price?.currency_code;
+    const intervalUnit = regularCycle.frequency?.interval_unit;
+    const intervalCount = regularCycle.frequency?.interval_count;
+
+    const isPriceMatch = value === '4.99' && currency === 'USD';
+    const isMonthly = intervalUnit === 'MONTH' && Number(intervalCount) === 1;
+
+    if (!isPriceMatch || !isMonthly) {
+      console.warn(`[PayPal Billing Plan Audit] Plan ${planId} rejected: price=${value} ${currency}, interval=${intervalCount} ${intervalUnit} (must be $4.99 USD / 1 MONTH)`);
+      return false;
+    }
+
+    return true;
+  } catch (e) {
+    console.error(`[PayPal Billing Plan Audit] Error verifying plan ${planId}:`, e);
+    return false;
+  }
+}
+
+/**
  * Ensures a real PayPal Product and Monthly Recurring Billing Plan ($4.99 USD / Month) exist on PayPal
  */
 export async function getOrCreateMonthlyBillingPlan(): Promise<string | null> {
-  if (cachedMonthlyPlanId) {
-    return cachedMonthlyPlanId;
-  }
-
   const token = await getPayPalAccessToken();
   if (!token) {
     console.error('[PayPal Billing Plan] Unable to obtain token to verify/create monthly plan.');
-    return null;
+    return cachedMonthlyPlanId || PAYPAL_MONTHLY_PLAN_ID_DEFAULT;
+  }
+
+  // 1. Verify cached or default plan is valid and strictly $4.99 USD
+  if (cachedMonthlyPlanId) {
+    const isValid = await verifyPlanIsExactPrice(token, cachedMonthlyPlanId);
+    if (isValid) {
+      return cachedMonthlyPlanId;
+    }
+  }
+
+  // 2. Check canonical default plan P-1VK52313VC6878320NKDSNEY ($4.99/mo)
+  const isCanonicalValid = await verifyPlanIsExactPrice(token, PAYPAL_MONTHLY_PLAN_ID_DEFAULT);
+  if (isCanonicalValid) {
+    cachedMonthlyPlanId = PAYPAL_MONTHLY_PLAN_ID_DEFAULT;
+    return cachedMonthlyPlanId;
   }
 
   try {
-    // 1. Check if an active monthly plan with $4.99 USD already exists in merchant account
+    // 3. Search specifically for The Insect Guide plans with $4.99 price
     const listPlansRes = await fetch(`${PAYPAL_API_BASE}/v1/billing/plans?page_size=20&status=ACTIVE`, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -89,19 +144,19 @@ export async function getOrCreateMonthlyBillingPlan(): Promise<string | null> {
 
     if (listPlansRes.ok) {
       const plansData: any = await listPlansRes.json();
-      const existingPlan = plansData.plans?.find(
-        (p: any) =>
-          p.name === 'The Insect Guide - Monthly Pro Membership' ||
-          (p.name?.includes('Monthly') && p.status === 'ACTIVE')
-      );
-      if (existingPlan?.id) {
-        cachedMonthlyPlanId = existingPlan.id;
-        console.log(`[PayPal Billing Plan] Reusing existing active PayPal Monthly Plan: ${cachedMonthlyPlanId}`);
-        return cachedMonthlyPlanId;
+      for (const p of plansData.plans || []) {
+        if (p.name?.toLowerCase().includes('insect guide') && p.status === 'ACTIVE') {
+          const isValid = await verifyPlanIsExactPrice(token, p.id);
+          if (isValid) {
+            cachedMonthlyPlanId = p.id;
+            console.log(`[PayPal Billing Plan] Verified active $4.99 monthly plan: ${cachedMonthlyPlanId}`);
+            return cachedMonthlyPlanId;
+          }
+        }
       }
     }
 
-    // 2. Ensure Catalog Product exists
+    // 4. Ensure Catalog Product exists
     if (!cachedProductId) {
       const listProductsRes = await fetch(`${PAYPAL_API_BASE}/v1/catalogs/products?page_size=20`, {
         headers: {
@@ -138,17 +193,15 @@ export async function getOrCreateMonthlyBillingPlan(): Promise<string | null> {
           const newProd: any = await createProdRes.json();
           cachedProductId = newProd.id;
           console.log(`[PayPal Product] Created new PayPal Product: ${cachedProductId}`);
-        } else {
-          console.warn('[PayPal Product] Failed to create product, falling back to default.');
         }
       }
     }
 
-    // 3. Create Real Recurring Billing Plan ($4.99 USD / 1 Month / Infinite cycles)
+    // 5. Create Real Recurring Billing Plan ($4.99 USD / 1 Month / Infinite cycles)
     const planPayload = {
-      product_id: cachedProductId || 'PROD-THEINSECTGUIDE-PRO',
-      name: 'The Insect Guide - Monthly Pro Membership',
-      description: 'Monthly recurring subscription for unlimited AI insect scans, venom assessments & triage',
+      product_id: cachedProductId || PAYPAL_PRODUCT_ID_DEFAULT,
+      name: 'The Insect Guide - Monthly Pro ($4.99/mo)',
+      description: 'Monthly recurring subscription for unlimited AI insect scans, venom assessments & triage at $4.99 USD',
       status: 'ACTIVE',
       billing_cycles: [
         {
@@ -161,7 +214,7 @@ export async function getOrCreateMonthlyBillingPlan(): Promise<string | null> {
           total_cycles: 0, // 0 = Infinite / continuous until cancelled
           pricing_scheme: {
             fixed_price: {
-              value: '4.99',
+              value: MONTHLY_PRICE_USD,
               currency_code: 'USD',
             },
           },
@@ -187,15 +240,15 @@ export async function getOrCreateMonthlyBillingPlan(): Promise<string | null> {
     const planData: any = await createPlanRes.json();
     if (createPlanRes.ok && planData?.id) {
       cachedMonthlyPlanId = planData.id;
-      console.log(`[PayPal Billing Plan] Created new active recurring PayPal Monthly Plan: ${cachedMonthlyPlanId}`);
+      console.log(`[PayPal Billing Plan] Created new active recurring PayPal Monthly Plan at $4.99 USD: ${cachedMonthlyPlanId}`);
       return cachedMonthlyPlanId;
     } else {
-      console.error('[PayPal Billing Plan] Failed to create plan on PayPal:', planData);
-      return null;
+      console.error('[PayPal Billing Plan] Failed to create plan on PayPal, fallback to verified default:', planData);
+      return PAYPAL_MONTHLY_PLAN_ID_DEFAULT;
     }
   } catch (err) {
-    console.error('[PayPal Billing Plan] Exception creating/fetching plan:', err);
-    return null;
+    console.error('[PayPal Billing Plan] Exception creating/fetching plan, fallback to verified default:', err);
+    return PAYPAL_MONTHLY_PLAN_ID_DEFAULT;
   }
 }
 

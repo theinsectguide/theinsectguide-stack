@@ -16,7 +16,7 @@ export const PayPalButton: React.FC<PayPalButtonProps> = ({ plan, price, onSucce
   const [cancelMsg, setCancelMsg] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
   const [clientId, setClientId] = useState<string>('AffnRM3aLTLlYUT538UDsDxpM4MqrBrrCt-2Ihl9L4TDKgVLsmiTjE8qdmO-CrHi7HqgS6fOnlQOmmYV');
-  const [monthlyPlanId, setMonthlyPlanId] = useState<string>('');
+  const [monthlyPlanId, setMonthlyPlanId] = useState<string>('P-1VK52313VC6878320NKDSNEY');
 
   useEffect(() => {
     // Fetch live client configuration from backend

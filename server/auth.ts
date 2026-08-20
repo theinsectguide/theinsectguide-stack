@@ -167,9 +167,9 @@ export async function seedDemoUser() {
   const demoPassword = 'Theinsectguide_demo';
 
   const existing = await findUserByEmail(demoEmail);
-  const hashedPassword = await hashPassword(demoPassword);
 
   if (!existing) {
+    const hashedPassword = await hashPassword(demoPassword);
     await createUser({
       email: demoEmail,
       password: hashedPassword,
@@ -187,15 +187,8 @@ export async function seedDemoUser() {
     });
     console.log(`[Seed] Demo Pro user initialized: ${demoEmail}`);
   } else {
-    // Ensure credentials and Pro tier are always synchronized
-    await updateUser(existing._id, {
-      password: hashedPassword,
-      tier: 'pro',
-      subscription_status: 'active',
-      subscription_plan: 'annual',
-      role: 'user', // ensure NOT admin
-    });
-    console.log(`[Seed] Demo Pro user updated/verified: ${demoEmail}`);
+    // Strictly preserve existing user without destroying state or resetting password
+    console.log(`[Seed] Demo Pro user preserved: ${demoEmail}`);
   }
 }
 
@@ -226,12 +219,11 @@ export async function seedAdminUser() {
 }
 
 export async function seedProtectedUsers() {
-  const defaultPassword = await hashPassword('Test1234');
-
-  // Vita Rosa (Free Tier account for payment testing)
+  // Vita Rosa (Protected account)
   const vitaEmail = 'vitarosa2013@gmail.com';
   const vitaExisting = await findUserByEmail(vitaEmail);
   if (!vitaExisting) {
+    const defaultPassword = await hashPassword('Test1234');
     await createUser({
       email: vitaEmail,
       password: defaultPassword,
@@ -245,15 +237,9 @@ export async function seedProtectedUsers() {
       scans_count: 0,
       species_found: 0,
     });
-    console.log(`[Seed] Protected user initialized as Free (ready for checkout testing): ${vitaEmail}`);
+    console.log(`[Seed] User initialized: ${vitaEmail}`);
   } else {
-    await updateUser(vitaExisting._id, {
-      password: defaultPassword,
-      tier: 'free',
-      subscription_status: 'none',
-      subscription_plan: undefined,
-      last_payment_date: undefined,
-    });
-    console.log(`[Seed] User ${vitaEmail} set to Free tier for payment testing`);
+    // Strictly preserve existing user data, subscription, tier, and credentials
+    console.log(`[Seed] Existing user preserved: ${vitaEmail}`);
   }
 }
