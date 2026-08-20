@@ -40,12 +40,16 @@ export const SettingsPage: React.FC<{ onNavigate: (tab: string) => void; onGoBac
   const fetchTransactions = async () => {
     if (!token) return;
     try {
-      const res = await fetch('/api/subscription/transactions', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
+      const [txRes, detailsRes] = await Promise.all([
+        fetch('/api/subscription/transactions', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/subscription/details', { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      if (txRes.ok) {
+        const data = await txRes.json();
         setUserTransactions(data.transactions || []);
+      }
+      if (detailsRes.ok) {
+        await refreshUser();
       }
     } catch {
       // ignore fetch error
@@ -270,6 +274,63 @@ export const SettingsPage: React.FC<{ onNavigate: (tab: string) => void; onGoBac
           </div>
         )}
 
+        {/* Subscription & Access Overview */}
+        {isPro && user?.last_payment_date && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-[#141424] border border-slate-700/80">
+            <div>
+              <p className="text-[11px] text-slate-400 font-medium">Billing Type &amp; Plan</p>
+              <p className="text-xs sm:text-sm font-bold text-white mt-0.5">
+                {user.subscription_plan === 'annual'
+                  ? 'PayPal Annual Pass ($29.99 / year)'
+                  : 'PayPal Recurring Subscription ($4.99 / month)'}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] text-slate-400 font-medium">Subscription Status</p>
+              <p className="text-xs sm:text-sm font-bold text-emerald-400 mt-0.5">
+                {user.subscription_status === 'active'
+                  ? user.subscription_plan === 'annual'
+                    ? 'Active (1-Year Term)'
+                    : 'Active (Auto-renews via PayPal)'
+                  : user.subscription_status === 'cancelled'
+                  ? 'Auto-Renewal Cancelled'
+                  : user.subscription_status === 'refunded'
+                  ? 'Refunded & Closed'
+                  : 'Term Active'}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] text-slate-400 font-medium">Next Payment / Expiration</p>
+              <p className="text-xs sm:text-sm font-bold text-slate-200 mt-0.5">
+                {user.subscription_status === 'active' && user.subscription_plan !== 'annual' ? (
+                  user.subscription_next_payment_date ? (
+                    <span className="text-emerald-300">
+                      {new Date(user.subscription_next_payment_date).toLocaleDateString()} ($4.99 USD)
+                    </span>
+                  ) : (
+                    <span>Next monthly cycle</span>
+                  )
+                ) : user.subscription_status === 'cancelled' ? (
+                  <span className="text-amber-300">
+                    No future charges (Access until{' '}
+                    {user.subscription_next_payment_date
+                      ? new Date(user.subscription_next_payment_date).toLocaleDateString()
+                      : new Date(new Date(user.last_payment_date).getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                    )
+                  </span>
+                ) : user.subscription_plan === 'annual' ? (
+                  <span>
+                    Valid until{' '}
+                    {new Date(new Date(user.last_payment_date).getTime() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+                  </span>
+                ) : (
+                  <span>Term Closed</span>
+                )}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Payment History Statement Table */}
         <div className="space-y-3">
           <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
@@ -307,19 +368,26 @@ export const SettingsPage: React.FC<{ onNavigate: (tab: string) => void; onGoBac
                       </td>
                       <td className="p-3">
                         {tx.status === 'REFUNDED' || tx.refund_status === 'refund_succeeded' ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 inline-block">
                             Refunded (${tx.refunded_amount || tx.amount})
                           </span>
                         ) : tx.refund_status === 'refund_pending' ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 inline-block">
                             Refund Pending
                           </span>
                         ) : tx.refund_status === 'refund_failed' ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
-                            Refund Failed
-                          </span>
+                          <div className="space-y-1">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 inline-block">
+                              Refund Failed
+                            </span>
+                            {tx.refund_error && (
+                              <p className="text-[10px] text-rose-300/90 max-w-xs break-words">
+                                {tx.refund_error}
+                              </p>
+                            )}
+                          </div>
                         ) : (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 inline-block">
                             Completed &amp; Active
                           </span>
                         )}

@@ -16,7 +16,7 @@
     },
     "6a85847509f68d3e6384eee7": {
       "email": "demo@theinsectguide.com",
-      "password": "$2b$10$tvbANLlJOs8hC50HZL00NuaGSIjgkU8FuSQZCZlhsTw6Vfq6sEJIK",
+      "password": "$2b$10$JE2YC5mHRlc3RFSn0WKZ5uFKXwv1ibz5zVaKiNRBTg45BrA.YizBy",
       "name": "Demo Entomologist",
       "region": "UK",
       "level": "Expert",
@@ -32,7 +32,7 @@
     },
     "6a85847509f68d3e6384eee9": {
       "email": "vitarosa2013@gmail.com",
-      "password": "$2b$10$I3Kgh9e6iQhOP43aIstOM.gEt3Jv.jhKGmN5pCoP40XHD.BpC/APq",
+      "password": "$2b$10$0izMntXdJ5QTrXhNwdQzceyrq.FQKnD/AdnHv3//3himlhv3egfCC",
       "name": "Vita Rosa",
       "region": "EU",
       "level": "Expert",
@@ -89,6 +89,29 @@
       "last_payment_date": "2026-08-20T15:19:21.573Z",
       "_id": "6a871af9f90c38695050dc09",
       "refund_requested": true
+    },
+    "6a87218829b90193d44c1223": {
+      "email": "audit_user_1_1787240840993@theinsectguide.com",
+      "name": "Audit User 1",
+      "password": "password123",
+      "region": "UK",
+      "tier": "free",
+      "subscription_status": "refunded",
+      "subscription_plan": "monthly",
+      "last_payment_date": "2026-08-20T15:47:20.993Z",
+      "_id": "6a87218829b90193d44c1223",
+      "refund_requested": true
+    },
+    "6a87218929b90193d44c1225": {
+      "email": "audit_user_2_1787240841001@theinsectguide.com",
+      "name": "Audit User 2",
+      "password": "password123",
+      "region": "EU",
+      "tier": "pro",
+      "subscription_status": "active",
+      "subscription_plan": "monthly",
+      "last_payment_date": "2026-08-20T15:47:21.002Z",
+      "_id": "6a87218929b90193d44c1225"
     }
   },
   "scans": {
@@ -237,7 +260,59 @@
         },
         "create_time": "2026-08-20T15:19:21.574Z"
       }
+    },
+    "6a87218829b90193d44c1224": {
+      "user_id": "6a87218829b90193d44c1223",
+      "order_id": "ORDER_LIVE_TEST_101",
+      "capture_id": "2GG36315N4820351K",
+      "payer_email": "audit_user_1_1787240840993@theinsectguide.com",
+      "amount": "4.99",
+      "currency": "USD",
+      "plan": "monthly",
+      "status": "REFUNDED",
+      "created_at": "2026-08-20T15:47:20.997Z",
+      "_id": "6a87218829b90193d44c1224",
+      "refund_status": "refund_succeeded",
+      "refund_requested_at": "2026-08-20T15:47:20.998Z",
+      "refund_id": "9AB99887766554433",
+      "refunded_amount": "4.99",
+      "refund_created_at": "2026-08-20T15:47:20.999Z",
+      "refund_raw_response": {
+        "id": "9AB99887766554433",
+        "status": "COMPLETED",
+        "amount": {
+          "value": "4.99",
+          "currency_code": "USD"
+        },
+        "create_time": "2026-08-20T15:47:20.999Z"
+      }
+    },
+    "6a87218929b90193d44c1226": {
+      "user_id": "6a87218929b90193d44c1225",
+      "order_id": "ORDER_LIVE_TEST_202",
+      "capture_id": "4HH78912N9988112M",
+      "payer_email": "audit_user_2_1787240841001@theinsectguide.com",
+      "amount": "4.99",
+      "currency": "USD",
+      "plan": "monthly",
+      "status": "COMPLETED",
+      "created_at": "2026-08-20T15:47:21.002Z",
+      "_id": "6a87218929b90193d44c1226",
+      "refund_status": "refund_failed",
+      "refund_requested_at": "2026-08-20T15:47:21.002Z",
+      "refund_error": "[INSUFFICIENT_FUNDS] Merchant has insufficient funds in their PayPal balance. (PayPal Debug ID: debug_9c4b72183c21a)",
+      "refund_raw_response": {
+        "name": "UNPROCESSABLE_ENTITY",
+        "message": "The requested action could not be performed, semantically incorrect, or failed business validation.",
+        "debug_id": "debug_9c4b72183c21a",
+        "details": [
+          {
+            "issue": "INSUFFICIENT_FUNDS",
+            "description": "Merchant has insufficient funds in their PayPal balance."
+          }
+        ]
+      }
     }
   },
-  "last_persisted_at": "2026-08-20T15:19:21.574Z"
+  "last_persisted_at": "2026-08-20T15:47:21.003Z"
 }

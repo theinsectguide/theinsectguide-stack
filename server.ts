@@ -58,6 +58,9 @@ import {
   getPayPalConfig,
   handleCreatePayPalOrder,
   handleCapturePayPalOrder,
+  handleCreatePayPalSubscription,
+  handleVerifyPayPalSubscription,
+  handleGetSubscriptionDetails,
   handleCancelSubscription,
   handleRequestRefund,
   handlePayPalWebhook,
@@ -97,8 +100,13 @@ async function getUserProfileWithStats(user: UserDoc) {
     role: user.role,
     subscription_status: user.subscription_status,
     subscription_plan: user.subscription_plan,
+    subscription_type: user.subscription_type,
+    subscription_id: user.subscription_id,
+    paypal_subscription_id: user.paypal_subscription_id,
     subscription_start: user.subscription_start,
     last_payment_date: user.last_payment_date,
+    subscription_next_payment_date: user.subscription_next_payment_date,
+    subscription_cancelled_at: user.subscription_cancelled_at,
     scans_count: userScans.length,
     species_found: uniqueSpecies.size,
     refund_requested: user.refund_requested,
@@ -774,6 +782,9 @@ app.post('/api/alerts/push-subscribe', requireAuth, async (req: AuthRequest, res
 app.get('/api/paypal/config', getPayPalConfig);
 app.post('/api/paypal/create-order', requireAuth, handleCreatePayPalOrder);
 app.post('/api/paypal/capture-order', requireAuth, handleCapturePayPalOrder);
+app.post('/api/paypal/create-subscription', requireAuth, handleCreatePayPalSubscription);
+app.post('/api/paypal/verify-subscription', requireAuth, handleVerifyPayPalSubscription);
+app.get('/api/subscription/details', requireAuth, handleGetSubscriptionDetails);
 app.post('/api/subscription/cancel', requireAuth, handleCancelSubscription);
 app.post('/api/subscription/refund', requireAuth, handleRequestRefund);
 app.get('/api/subscription/transactions', requireAuth, async (req: AuthRequest, res: Response) => {

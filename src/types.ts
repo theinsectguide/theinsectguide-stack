@@ -6,10 +6,15 @@ export interface User {
   level: 'Beginner' | 'Amateur' | 'Expert' | 'Master';
   tier: 'free' | 'pro';
   role: 'user' | 'admin';
-  subscription_status: 'active' | 'cancelled' | 'refunded' | 'none';
+  subscription_status: 'active' | 'cancelled' | 'refunded' | 'none' | 'suspended';
   subscription_plan?: 'monthly' | 'annual';
+  subscription_type?: 'recurring_subscription' | 'one_time_term';
+  subscription_id?: string;
+  paypal_subscription_id?: string;
   subscription_start?: string;
   last_payment_date?: string;
+  subscription_next_payment_date?: string;
+  subscription_cancelled_at?: string;
   scans_count?: number;
   species_found?: number;
   refund_requested?: boolean;

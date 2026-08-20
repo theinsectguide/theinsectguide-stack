@@ -7,10 +7,15 @@ export interface UserDoc {
   level: 'Beginner' | 'Amateur' | 'Expert' | 'Master';
   tier: 'free' | 'pro';
   subscription_id?: string;
-  subscription_status: 'active' | 'cancelled' | 'refunded' | 'none';
+  paypal_subscription_id?: string;
+  subscription_plan_id?: string;
+  subscription_status: 'active' | 'cancelled' | 'refunded' | 'none' | 'suspended';
   subscription_plan?: 'monthly' | 'annual';
+  subscription_type?: 'recurring_subscription' | 'one_time_term';
   subscription_start?: string;
   last_payment_date?: string;
+  subscription_next_payment_date?: string;
+  subscription_cancelled_at?: string;
   role: 'user' | 'admin';
   created_at: string;
   scans_count: number;
@@ -167,6 +172,7 @@ export interface TransactionDoc {
   user_id: string;
   order_id: string;
   capture_id: string;
+  subscription_id?: string;
   payer_email?: string;
   payer_id?: string;
   amount: string;

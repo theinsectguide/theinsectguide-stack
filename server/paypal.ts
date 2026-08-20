@@ -1,12 +1,15 @@
+import crypto from 'crypto';
 import { Request, Response } from 'express';
 import { AuthRequest } from './auth';
 import {
   updateUser,
   findUserById,
+  findUserBySubscriptionId,
   createTransaction,
   updateTransaction,
   findTransactionByCaptureId,
   findTransactionByRefundId,
+  findTransactionBySubscriptionId,
   findFirstCompletedTransactionForUser,
 } from './db';
 import {
@@ -21,22 +24,16 @@ export const PAYPAL_MODE = process.env.PAYPAL_MODE || 'live';
 export const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || 'AffnRM3aLTLlYUT538UDsDxpM4MqrBrrCt-2Ihl9L4TDKgVLsmiTjE8qdmO-CrHi7HqgS6fOnlQOmmYV';
 export const PAYPAL_CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || 'EAkJG726rN_7QJrQllDhVDQqy_V7RmJPE3A5EYVx5i_a4hWn7QhIyL6lKaX-AaZ_V9i4qfgS5oM7bjK3';
 export const PAYPAL_WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID || '2A319232KL071003J';
+export const PAYPAL_MONTHLY_PLAN_ID_ENV = process.env.PAYPAL_MONTHLY_PLAN_ID || '';
 
 // Live / Sandbox PayPal REST API base URL
 export const PAYPAL_API_BASE = PAYPAL_MODE === 'sandbox'
   ? 'https://api-m.sandbox.paypal.com'
   : 'https://api-m.paypal.com';
 
-/**
- * Expose client configuration to frontend
- */
-export async function getPayPalConfig(req: Request, res: Response) {
-  return res.json({
-    clientId: PAYPAL_CLIENT_ID,
-    currency: 'USD',
-    mode: PAYPAL_MODE,
-  });
-}
+// Cache for dynamically verified / provisioned PayPal Product & Billing Plan
+let cachedMonthlyPlanId: string = PAYPAL_MONTHLY_PLAN_ID_ENV;
+let cachedProductId: string = '';
 
 /**
  * Fetch OAuth2 Access Token from PayPal REST API
@@ -68,19 +65,386 @@ export async function getPayPalAccessToken(): Promise<string | null> {
 }
 
 /**
+ * Ensures a real PayPal Product and Monthly Recurring Billing Plan ($4.99 USD / Month) exist on PayPal
+ */
+export async function getOrCreateMonthlyBillingPlan(): Promise<string | null> {
+  if (cachedMonthlyPlanId) {
+    return cachedMonthlyPlanId;
+  }
+
+  const token = await getPayPalAccessToken();
+  if (!token) {
+    console.error('[PayPal Billing Plan] Unable to obtain token to verify/create monthly plan.');
+    return null;
+  }
+
+  try {
+    // 1. Check if an active monthly plan with $4.99 USD already exists in merchant account
+    const listPlansRes = await fetch(`${PAYPAL_API_BASE}/v1/billing/plans?page_size=20&status=ACTIVE`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (listPlansRes.ok) {
+      const plansData: any = await listPlansRes.json();
+      const existingPlan = plansData.plans?.find(
+        (p: any) =>
+          p.name === 'The Insect Guide - Monthly Pro Membership' ||
+          (p.name?.includes('Monthly') && p.status === 'ACTIVE')
+      );
+      if (existingPlan?.id) {
+        cachedMonthlyPlanId = existingPlan.id;
+        console.log(`[PayPal Billing Plan] Reusing existing active PayPal Monthly Plan: ${cachedMonthlyPlanId}`);
+        return cachedMonthlyPlanId;
+      }
+    }
+
+    // 2. Ensure Catalog Product exists
+    if (!cachedProductId) {
+      const listProductsRes = await fetch(`${PAYPAL_API_BASE}/v1/catalogs/products?page_size=20`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (listProductsRes.ok) {
+        const prodData: any = await listProductsRes.json();
+        const existingProd = prodData.products?.find((p: any) => p.name === 'The Insect Guide Pro');
+        if (existingProd?.id) {
+          cachedProductId = existingProd.id;
+        }
+      }
+
+      if (!cachedProductId) {
+        const createProdRes = await fetch(`${PAYPAL_API_BASE}/v1/catalogs/products`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'PayPal-Request-Id': crypto.randomUUID(),
+          },
+          body: JSON.stringify({
+            name: 'The Insect Guide Pro',
+            description: 'Unlimited AI insect scans, venom assessments & emergency triage protocols',
+            type: 'DIGITAL',
+            category: 'ONLINE_SERVICES',
+          }),
+        });
+
+        if (createProdRes.ok) {
+          const newProd: any = await createProdRes.json();
+          cachedProductId = newProd.id;
+          console.log(`[PayPal Product] Created new PayPal Product: ${cachedProductId}`);
+        } else {
+          console.warn('[PayPal Product] Failed to create product, falling back to default.');
+        }
+      }
+    }
+
+    // 3. Create Real Recurring Billing Plan ($4.99 USD / 1 Month / Infinite cycles)
+    const planPayload = {
+      product_id: cachedProductId || 'PROD-THEINSECTGUIDE-PRO',
+      name: 'The Insect Guide - Monthly Pro Membership',
+      description: 'Monthly recurring subscription for unlimited AI insect scans, venom assessments & triage',
+      status: 'ACTIVE',
+      billing_cycles: [
+        {
+          frequency: {
+            interval_unit: 'MONTH',
+            interval_count: 1,
+          },
+          tenure_type: 'REGULAR',
+          sequence: 1,
+          total_cycles: 0, // 0 = Infinite / continuous until cancelled
+          pricing_scheme: {
+            fixed_price: {
+              value: '4.99',
+              currency_code: 'USD',
+            },
+          },
+        },
+      ],
+      payment_preferences: {
+        auto_bill_outstanding: true,
+        setup_fee_failure_action: 'CONTINUE',
+        payment_failure_threshold: 3,
+      },
+    };
+
+    const createPlanRes = await fetch(`${PAYPAL_API_BASE}/v1/billing/plans`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'PayPal-Request-Id': crypto.randomUUID(),
+      },
+      body: JSON.stringify(planPayload),
+    });
+
+    const planData: any = await createPlanRes.json();
+    if (createPlanRes.ok && planData?.id) {
+      cachedMonthlyPlanId = planData.id;
+      console.log(`[PayPal Billing Plan] Created new active recurring PayPal Monthly Plan: ${cachedMonthlyPlanId}`);
+      return cachedMonthlyPlanId;
+    } else {
+      console.error('[PayPal Billing Plan] Failed to create plan on PayPal:', planData);
+      return null;
+    }
+  } catch (err) {
+    console.error('[PayPal Billing Plan] Exception creating/fetching plan:', err);
+    return null;
+  }
+}
+
+/**
+ * Expose client configuration to frontend
+ */
+export async function getPayPalConfig(req: Request, res: Response) {
+  const monthlyPlanId = await getOrCreateMonthlyBillingPlan();
+  return res.json({
+    clientId: PAYPAL_CLIENT_ID,
+    currency: 'USD',
+    mode: PAYPAL_MODE,
+    monthlyPlanId: monthlyPlanId || PAYPAL_MONTHLY_PLAN_ID_ENV,
+  });
+}
+
+/**
+ * CREATE RECURRING PAYPAL SUBSCRIPTION (POST /v1/billing/subscriptions)
+ * Used strictly for MONTHLY recurring billing ($4.99/mo)
+ */
+export async function handleCreatePayPalSubscription(req: AuthRequest, res: Response) {
+  try {
+    const user = req.user!;
+    const planId = await getOrCreateMonthlyBillingPlan();
+
+    if (!planId) {
+      return res.status(500).json({ error: 'PayPal recurring billing plan is not initialized. Please try again shortly.' });
+    }
+
+    const token = await getPayPalAccessToken();
+    if (!token) {
+      return res.status(500).json({ error: 'Failed to authenticate with PayPal API.' });
+    }
+
+    const subscriptionPayload = {
+      plan_id: planId,
+      custom_id: user._id,
+      subscriber: {
+        name: {
+          given_name: user.name || 'Explorer',
+        },
+        email_address: user.email,
+      },
+      application_context: {
+        brand_name: 'The Insect Guide',
+        locale: 'en-US',
+        shipping_preference: 'NO_SHIPPING',
+        user_action: 'SUBSCRIBE_NOW',
+        payment_method: {
+          payer_selected: 'PAYPAL',
+          payee_preferred: 'IMMEDIATE_PAYMENT_REQUIRED',
+        },
+        return_url: 'https://theinsectguide.com/#scan',
+        cancel_url: 'https://theinsectguide.com/#pricing',
+      },
+    };
+
+    const response = await fetch(`${PAYPAL_API_BASE}/v1/billing/subscriptions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'PayPal-Request-Id': crypto.randomUUID(),
+      },
+      body: JSON.stringify(subscriptionPayload),
+    });
+
+    const subData: any = await response.json();
+    if (!response.ok || !subData?.id) {
+      console.error('[PayPal Subscription API] Error creating subscription:', subData);
+      return res.status(response.status).json({
+        error: subData.message || 'Failed to initialize PayPal recurring subscription.',
+        details: subData.details,
+      });
+    }
+
+    console.log(`[PayPal Subscription API] Subscription initialized: ${subData.id} for user ${user.email} (Plan: ${planId})`);
+
+    return res.status(200).json({
+      id: subData.id,
+      subscriptionID: subData.id,
+      status: subData.status,
+      plan_id: planId,
+    });
+  } catch (err: any) {
+    console.error('[PayPal Subscription API] Exception creating subscription:', err);
+    return res.status(500).json({ error: 'Internal server error while initializing subscription.' });
+  }
+}
+
+/**
+ * VERIFY & ACTIVATE RECURRING PAYPAL SUBSCRIPTION (POST /api/paypal/verify-subscription)
+ * Confirms real PayPal subscription status, fetches live next_billing_time and initial transaction capture ID
+ */
+export async function handleVerifyPayPalSubscription(req: AuthRequest, res: Response) {
+  try {
+    const user = req.user!;
+    const { subscriptionID, orderID } = req.body;
+
+    if (!subscriptionID) {
+      return res.status(400).json({ error: 'Missing required subscriptionID for subscription verification.' });
+    }
+
+    const token = await getPayPalAccessToken();
+    if (!token) {
+      return res.status(500).json({ error: 'Failed to authenticate with PayPal API.' });
+    }
+
+    // 1. Fetch live subscription object from PayPal REST API: GET /v1/billing/subscriptions/{subscription_id}
+    const response = await fetch(`${PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionID}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const subData: any = await response.json();
+    const status = subData?.status;
+    const isActive = status === 'ACTIVE' || status === 'APPROVED';
+
+    if (!response.ok || !isActive) {
+      console.warn(`[PayPal Subscription Security Check] Subscription ${subscriptionID} rejected. Status: ${status}`);
+      return res.status(400).json({
+        error: `PayPal recurring subscription is not active (Status: ${status || 'UNKNOWN'}). Pro access not granted.`,
+        details: subData?.details || subData?.message,
+      });
+    }
+
+    // 2. Fetch Subscription Transactions to get real Capture ID of the 1st payment
+    let captureId = orderID || subscriptionID;
+    try {
+      const now = new Date();
+      const pastTime = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+      const futureTime = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+
+      const txRes = await fetch(
+        `${PAYPAL_API_BASE}/v1/billing/subscriptions/${subscriptionID}/transactions?start_time=${pastTime}&end_time=${futureTime}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (txRes.ok) {
+        const txData: any = await txRes.json();
+        if (Array.isArray(txData.transactions) && txData.transactions.length > 0) {
+          const firstCompletedTx = txData.transactions.find((t: any) => t.status === 'COMPLETED') || txData.transactions[0];
+          if (firstCompletedTx?.id) {
+            captureId = firstCompletedTx.id;
+            console.log(`[PayPal Subscription] Retrieved real capture ID ${captureId} for subscription ${subscriptionID}`);
+          }
+        }
+      }
+    } catch (txErr) {
+      console.warn('[PayPal Subscription] Could not fetch transactions sub-resource, fallback to subscription ID:', txErr);
+    }
+
+    // 3. Extract Real Next Payment Date directly from PayPal subscription object
+    const nextPaymentDate = subData.billing_info?.next_billing_time;
+    const lastPaymentTime = subData.billing_info?.last_payment?.time || subData.start_time || new Date().toISOString();
+    const lastPaymentAmount = subData.billing_info?.last_payment?.amount?.value || '4.99';
+    const currencyVal = subData.billing_info?.last_payment?.amount?.currency_code || 'USD';
+    const payerEmail = subData.subscriber?.email_address || user.email;
+    const payerId = subData.subscriber?.payer_id;
+
+    // 4. Upgrade User account to PRO with real subscription details
+    const updated = await updateUser(user._id, {
+      tier: 'pro',
+      subscription_id: subscriptionID,
+      paypal_subscription_id: subscriptionID,
+      subscription_plan_id: subData.plan_id,
+      subscription_status: 'active',
+      subscription_plan: 'monthly',
+      subscription_type: 'recurring_subscription',
+      subscription_start: subData.start_time || new Date().toISOString(),
+      last_payment_date: lastPaymentTime,
+      subscription_next_payment_date: nextPaymentDate || undefined,
+      refund_requested: false,
+    });
+
+    // 5. Record verified transaction in persistent database
+    await createTransaction({
+      user_id: user._id,
+      order_id: orderID || subscriptionID,
+      capture_id: captureId,
+      subscription_id: subscriptionID,
+      payer_email: payerEmail,
+      payer_id: payerId,
+      amount: lastPaymentAmount,
+      currency: currencyVal,
+      plan: 'monthly',
+      status: 'COMPLETED',
+      created_at: lastPaymentTime,
+      raw_details: subData,
+    });
+
+    // 6. Send confirmation email and sync contact with Brevo
+    const planName = 'Monthly Pro ($4.99/mo Recurring Subscription)';
+    const amountStr = `$${lastPaymentAmount}`;
+    await sendPaymentConfirmedEmail(user, planName, amountStr).catch(err => console.warn('Payment email warning:', err));
+    if (updated) {
+      addOrUpdateBrevoContact(updated).catch(err => console.warn('Brevo contact update warning:', err));
+    }
+
+    console.log(`[PayPal Subscription Activated] User ${user.email} upgraded to Pro via Subscription ${subscriptionID} (Next Payment: ${nextPaymentDate})`);
+
+    return res.status(200).json({
+      success: true,
+      status: 'ACTIVE',
+      subscriptionID,
+      captureID: captureId,
+      next_billing_time: nextPaymentDate,
+      message: 'PayPal recurring subscription activated successfully!',
+      user: {
+        id: updated?._id,
+        email: updated?.email,
+        name: updated?.name,
+        tier: updated?.tier,
+        subscription_status: updated?.subscription_status,
+        subscription_plan: updated?.subscription_plan,
+        subscription_type: updated?.subscription_type,
+        subscription_start: updated?.subscription_start,
+        last_payment_date: updated?.last_payment_date,
+        subscription_next_payment_date: updated?.subscription_next_payment_date,
+      },
+    });
+  } catch (err: any) {
+    console.error('[PayPal Subscription API] Exception during subscription verification:', err);
+    return res.status(500).json({ error: 'Internal server error while verifying subscription.' });
+  }
+}
+
+/**
  * CREATE PAYPAL ORDER (POST /v2/checkout/orders)
- * Creates a verified server-side PayPal order with intent: 'CAPTURE'
+ * Preserved specifically for Annual Pass ($29.99 one-time access)
  */
 export async function handleCreatePayPalOrder(req: AuthRequest, res: Response) {
   try {
     const user = req.user!;
-    const { plan } = req.body; // 'monthly' ($4.99) or 'annual' ($29.99)
+    const { plan } = req.body; // 'annual' ($29.99) or fallback
 
     const isAnnual = plan === 'annual';
     const amountValue = isAnnual ? '29.99' : '4.99';
     const planName = isAnnual
       ? 'The Insect Guide - Annual Pro Membership (Save 50%)'
-      : 'The Insect Guide - Monthly Pro Membership';
+      : 'The Insect Guide - Pro Membership';
 
     const token = await getPayPalAccessToken();
     if (!token) {
@@ -232,6 +596,7 @@ export async function handleCapturePayPalOrder(req: AuthRequest, res: Response) 
       subscription_id: captureId,
       subscription_status: 'active',
       subscription_plan: plan === 'annual' ? 'annual' : 'monthly',
+      subscription_type: 'one_time_term',
       subscription_start: now,
       last_payment_date: now,
       refund_requested: false,
@@ -253,7 +618,7 @@ export async function handleCapturePayPalOrder(req: AuthRequest, res: Response) 
     });
 
     // Send confirmation email and sync contact
-    const planName = plan === 'annual' ? 'Annual Pro ($29.99/yr)' : 'Monthly Pro ($4.99/mo)';
+    const planName = plan === 'annual' ? 'Annual Pro ($29.99/yr Pass)' : 'Monthly Pro ($4.99/mo)';
     const amountStr = `$${amountVal}`;
     await sendPaymentConfirmedEmail(user, planName, amountStr).catch(err => console.warn('Payment email warning:', err));
     if (updated) {
@@ -267,7 +632,7 @@ export async function handleCapturePayPalOrder(req: AuthRequest, res: Response) 
       status: 'COMPLETED',
       orderID,
       captureID: captureId,
-      message: 'Payment verified and Pro subscription activated successfully!',
+      message: 'Payment verified and Pro access activated successfully!',
       user: {
         id: updated?._id,
         email: updated?.email,
@@ -275,6 +640,7 @@ export async function handleCapturePayPalOrder(req: AuthRequest, res: Response) 
         tier: updated?.tier,
         subscription_status: updated?.subscription_status,
         subscription_plan: updated?.subscription_plan,
+        subscription_type: updated?.subscription_type,
         subscription_start: updated?.subscription_start,
         last_payment_date: updated?.last_payment_date,
       },
@@ -287,6 +653,86 @@ export async function handleCapturePayPalOrder(req: AuthRequest, res: Response) 
   }
 }
 
+/**
+ * GET LIVE SUBSCRIPTION DETAILS (GET /api/subscription/details)
+ * Fetches real next payment date and subscription status directly from PayPal
+ */
+export async function handleGetSubscriptionDetails(req: AuthRequest, res: Response) {
+  try {
+    const user = req.user!;
+    const subId = user.paypal_subscription_id || user.subscription_id;
+
+    if (user.tier !== 'pro' || !subId) {
+      return res.json({
+        tier: user.tier,
+        subscription_status: user.subscription_status,
+        subscription_plan: user.subscription_plan,
+        is_recurring: false,
+      });
+    }
+
+    // For Monthly recurring subscriptions, fetch live details from PayPal API
+    if (user.paypal_subscription_id || user.subscription_type === 'recurring_subscription' || subId.startsWith('I-')) {
+      const realSubId = user.paypal_subscription_id || subId;
+      const token = await getPayPalAccessToken();
+
+      if (token) {
+        const subRes = await fetch(`${PAYPAL_API_BASE}/v1/billing/subscriptions/${realSubId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (subRes.ok) {
+          const subData: any = await subRes.json();
+          const nextBillingTime = subData.billing_info?.next_billing_time;
+          const liveStatus = subData.status;
+
+          // Sync next billing time in database
+          if (nextBillingTime && nextBillingTime !== user.subscription_next_payment_date) {
+            await updateUser(user._id, {
+              subscription_next_payment_date: nextBillingTime,
+            });
+          }
+
+          return res.json({
+            tier: user.tier,
+            subscription_id: realSubId,
+            subscription_plan: 'monthly',
+            subscription_status: liveStatus === 'ACTIVE' ? 'active' : liveStatus === 'CANCELLED' ? 'cancelled' : user.subscription_status,
+            subscription_type: 'recurring_subscription',
+            subscription_next_payment_date: nextBillingTime || user.subscription_next_payment_date,
+            last_payment: subData.billing_info?.last_payment,
+            is_recurring: true,
+            billing_cycles_completed: subData.billing_info?.cycle_executions?.[0]?.cycles_completed || 1,
+            failed_payments_count: subData.billing_info?.failed_payments_count || 0,
+          });
+        }
+      }
+    }
+
+    // Return current stored subscription details
+    return res.json({
+      tier: user.tier,
+      subscription_id: user.subscription_id,
+      subscription_plan: user.subscription_plan,
+      subscription_status: user.subscription_status,
+      subscription_type: user.subscription_type || 'one_time_term',
+      subscription_next_payment_date: user.subscription_next_payment_date,
+      last_payment_date: user.last_payment_date,
+      is_recurring: user.subscription_type === 'recurring_subscription',
+    });
+  } catch (err: any) {
+    console.error('[Subscription Details Error]', err);
+    return res.status(500).json({ error: 'Failed to retrieve subscription details.' });
+  }
+}
+
+/**
+ * CANCEL SUBSCRIPTION (POST /api/subscription/cancel)
+ * Cancels real recurring PayPal subscription on PayPal servers via REST API
+ */
 export async function handleCancelSubscription(req: AuthRequest, res: Response) {
   try {
     const user = req.user!;
@@ -294,22 +740,52 @@ export async function handleCancelSubscription(req: AuthRequest, res: Response) 
       return res.status(400).json({ error: 'No active subscription found to cancel.' });
     }
 
+    const subId = user.paypal_subscription_id || (user.subscription_id?.startsWith('I-') ? user.subscription_id : null);
+
+    // If it's a real PayPal Recurring Subscription, cancel it directly on PayPal REST API
+    if (subId) {
+      const token = await getPayPalAccessToken();
+      if (token) {
+        console.log(`[PayPal Cancellation] Sending cancellation to PayPal for Subscription ${subId}...`);
+        const cancelRes = await fetch(`${PAYPAL_API_BASE}/v1/billing/subscriptions/${subId}/cancel`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            reason: 'Cancelled by customer via dashboard settings.',
+          }),
+        });
+
+        if (!cancelRes.ok && cancelRes.status !== 204) {
+          const cancelErr: any = await cancelRes.json().catch(() => ({}));
+          console.warn(`[PayPal Cancellation Warning] PayPal returned status ${cancelRes.status}:`, cancelErr);
+        } else {
+          console.log(`[PayPal Cancellation Success] PayPal subscription ${subId} successfully cancelled.`);
+        }
+      }
+    }
+
     // Set subscription status to cancelled (pro access kept until billing term ends)
+    const now = new Date().toISOString();
     const updated = await updateUser(user._id, {
       subscription_status: 'cancelled',
+      subscription_cancelled_at: now,
     });
 
-    await sendCancellationEmail(user);
+    await sendCancellationEmail(user).catch(err => console.warn('Cancellation email warning:', err));
     if (updated) {
       addOrUpdateBrevoContact(updated).catch(err => console.warn('Brevo cancellation contact update warning:', err));
     }
 
     return res.json({
       success: true,
-      message: 'Subscription cancelled. You will retain Pro access until the end of your billing cycle.',
+      message: 'Subscription renewal cancelled with PayPal. You will retain Pro access until the end of your current billing cycle.',
       user: {
         tier: updated?.tier,
         subscription_status: updated?.subscription_status,
+        subscription_cancelled_at: updated?.subscription_cancelled_at,
       },
     });
   } catch (err) {
@@ -317,6 +793,11 @@ export async function handleCancelSubscription(req: AuthRequest, res: Response) 
   }
 }
 
+/**
+ * 48-HOUR MONEY-BACK GUARANTEE REFUND
+ * Uses real PayPal Capture ID of the 1st payment transaction, executes real refund,
+ * and automatically cancels the recurring subscription on PayPal.
+ */
 export async function handleRequestRefund(req: AuthRequest, res: Response) {
   try {
     const user = req.user!;
@@ -358,21 +839,7 @@ export async function handleRequestRefund(req: AuthRequest, res: Response) {
       });
     }
 
-    // 4. Validate PayPal Capture ID
-    const captureId = targetTx.capture_id;
-    if (!captureId || captureId === 'FAILED' || captureId.startsWith('ORDER_')) {
-      return res.status(400).json({
-        error: 'No valid PayPal Capture ID found for this payment record. Please contact support.',
-      });
-    }
-
-    // 5. Set in-flight status on transaction to prevent concurrent race conditions
-    await updateTransaction(targetTx._id, {
-      refund_status: 'refund_requested',
-      refund_requested_at: new Date().toISOString(),
-    });
-
-    // 6. Obtain PayPal OAuth2 token
+    // 4. Obtain PayPal OAuth2 token
     const token = await getPayPalAccessToken();
     if (!token) {
       await updateTransaction(targetTx._id, {
@@ -384,15 +851,67 @@ export async function handleRequestRefund(req: AuthRequest, res: Response) {
       });
     }
 
+    // 5. Validate and resolve PayPal Capture ID
+    let captureId = targetTx.capture_id;
+
+    // If captureId is a subscription ID (starts with I-) or missing, resolve from PayPal Subscription Transactions API
+    const subId = targetTx.subscription_id || user.paypal_subscription_id || (captureId?.startsWith('I-') ? captureId : null);
+    if ((!captureId || captureId.startsWith('I-') || captureId.startsWith('ORDER_')) && subId) {
+      try {
+        const txTimeIso = new Date(targetTx.created_at);
+        const startTime = new Date(txTimeIso.getTime() - 24 * 60 * 60 * 1000).toISOString();
+        const endTime = new Date(txTimeIso.getTime() + 48 * 60 * 60 * 1000).toISOString();
+
+        const txRes = await fetch(
+          `${PAYPAL_API_BASE}/v1/billing/subscriptions/${subId}/transactions?start_time=${startTime}&end_time=${endTime}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (txRes.ok) {
+          const txData: any = await txRes.json();
+          if (Array.isArray(txData.transactions) && txData.transactions.length > 0) {
+            const completedTx = txData.transactions.find((t: any) => t.status === 'COMPLETED') || txData.transactions[0];
+            if (completedTx?.id) {
+              captureId = completedTx.id;
+              await updateTransaction(targetTx._id, { capture_id: captureId });
+              console.log(`[PayPal Refund] Resolved real Capture ID ${captureId} for subscription ${subId}`);
+            }
+          }
+        }
+      } catch (resErr) {
+        console.warn('[PayPal Refund] Could not resolve capture ID via subscription transactions:', resErr);
+      }
+    }
+
+    if (!captureId || captureId === 'FAILED' || captureId.startsWith('ORDER_')) {
+      return res.status(400).json({
+        error: 'No valid PayPal Capture ID found for this payment record. Please contact support.',
+      });
+    }
+
+    // 6. Set in-flight status on transaction to prevent concurrent race conditions
+    await updateTransaction(targetTx._id, {
+      refund_status: 'refund_requested',
+      refund_requested_at: new Date().toISOString(),
+    });
+
     // 7. Execute REAL PayPal Refund REST API call: POST /v2/payments/captures/{capture_id}/refund
-    const idempotencyKey = `refund_${targetTx._id}_${targetTx.capture_id}`;
-    const refundPayload = {
-      amount: {
-        value: targetTx.amount,
-        currency_code: targetTx.currency || 'USD',
-      },
+    const idempotencyKey = crypto.randomUUID();
+    const refundPayload: any = {
       note_to_payer: 'The Insect Guide — 48-Hour Money-Back Guarantee Refund',
     };
+
+    if (targetTx.amount && !isNaN(parseFloat(targetTx.amount))) {
+      refundPayload.amount = {
+        value: parseFloat(targetTx.amount).toFixed(2),
+        currency_code: targetTx.currency || 'USD',
+      };
+    }
 
     console.log(`[PayPal Refund API] Executing real refund for Capture ${captureId} ($${targetTx.amount} ${targetTx.currency || 'USD'})...`);
 
@@ -412,15 +931,38 @@ export async function handleRequestRefund(req: AuthRequest, res: Response) {
 
     // 8. Handle PayPal Error / Rejection
     if (!isSuccess || !refundId) {
-      const errorMsg =
-        refundData?.message ||
-        refundData?.details?.[0]?.description ||
-        refundData?.name ||
-        `PayPal refund request rejected (HTTP ${response.status})`;
+      const debugId = refundData?.debug_id;
+      const issues: string[] = [];
 
-      console.error(`[PayPal Refund Error] Capture ${captureId} refund rejected by PayPal:`, refundData);
+      if (Array.isArray(refundData?.details)) {
+        for (const detail of refundData.details) {
+          const part = [
+            detail.issue ? `[${detail.issue}]` : '',
+            detail.description || detail.message || '',
+            detail.field ? `(field: ${detail.field})` : '',
+          ].filter(Boolean).join(' ');
+          if (part) issues.push(part);
+        }
+      }
 
-      // Record failure without downgrading or deleting the user account
+      let errorMsg = '';
+      if (issues.length > 0) {
+        errorMsg = issues.join(' | ');
+      } else if (refundData?.message) {
+        errorMsg = refundData.message;
+      } else if (refundData?.name) {
+        errorMsg = refundData.name;
+      } else {
+        errorMsg = `PayPal refund rejected (HTTP ${response.status})`;
+      }
+
+      if (debugId) {
+        errorMsg += ` (PayPal Debug ID: ${debugId})`;
+      }
+
+      console.error(`[PayPal Refund Error] Capture ${captureId} refund rejected by PayPal:`, JSON.stringify(refundData, null, 2));
+
+      // Record failure with exact diagnostic details without downgrading or deleting user account
       await updateTransaction(targetTx._id, {
         refund_status: 'refund_failed',
         refund_error: errorMsg,
@@ -430,7 +972,10 @@ export async function handleRequestRefund(req: AuthRequest, res: Response) {
       return res.status(400).json({
         error: `PayPal refund rejected: ${errorMsg}`,
         refund_status: 'refund_failed',
-        details: refundData,
+        name: refundData?.name,
+        message: refundData?.message,
+        details: refundData?.details,
+        debug_id: debugId,
       });
     }
 
@@ -447,14 +992,28 @@ export async function handleRequestRefund(req: AuthRequest, res: Response) {
       refund_raw_response: refundData,
     });
 
-    // 10. Downgrade user account access ONLY after PayPal confirmation
+    // 10. Automatically Cancel Recurring Subscription on PayPal so future cycles are never charged
+    if (subId) {
+      fetch(`${PAYPAL_API_BASE}/v1/billing/subscriptions/${subId}/cancel`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reason: 'Automated cancellation following 48-hour satisfaction guarantee refund.',
+        }),
+      }).catch(cancelErr => console.warn('[PayPal Refund] Warning cancelling recurring subscription:', cancelErr));
+    }
+
+    // 11. Downgrade user account access ONLY after PayPal confirmation
     const updated = await updateUser(user._id, {
       tier: 'free',
       subscription_status: 'refunded',
       refund_requested: true,
     });
 
-    // 11. Dispatch Brevo confirmation email ONLY after PayPal confirmed the refund
+    // 12. Dispatch Brevo confirmation email ONLY after PayPal confirmed the refund
     await sendRefundEmail(user, refundId, refundedAmountVal).catch(err =>
       console.warn('[Brevo Warning] Failed to send refund confirmation email:', err)
     );
@@ -539,6 +1098,10 @@ export async function verifyPayPalWebhookSignature(headers: Record<string, any>,
   }
 }
 
+/**
+ * PAYPAL WEBHOOK HANDLER
+ * Handles subscription activation, recurring renewals, cancellations, expiration and failures
+ */
 export async function handlePayPalWebhook(req: any, res: Response) {
   try {
     // 1. Signature Verification Check
@@ -555,24 +1118,142 @@ export async function handlePayPalWebhook(req: any, res: Response) {
 
     console.log(`[PayPal Live Webhook Received & Verified] ${eventType} (Webhook ID: ${PAYPAL_WEBHOOK_ID})`);
 
-    // Handle Subscription events
+    // EVENT: BILLING.SUBSCRIPTION.ACTIVATED
     if (eventType === 'BILLING.SUBSCRIPTION.ACTIVATED') {
       const subId = resource?.id;
       const customId = resource?.custom_id;
-      if (customId) {
-        await updateUser(customId, {
+      const nextBillingTime = resource?.billing_info?.next_billing_time;
+      const startTime = resource?.start_time || new Date().toISOString();
+
+      let targetUser = null;
+      if (customId) targetUser = await findUserById(customId);
+      if (!targetUser && subId) targetUser = await findUserBySubscriptionId(subId);
+
+      if (targetUser) {
+        await updateUser(targetUser._id, {
           tier: 'pro',
           subscription_status: 'active',
+          paypal_subscription_id: subId,
           subscription_id: subId,
+          subscription_plan: 'monthly',
+          subscription_type: 'recurring_subscription',
+          subscription_start: startTime,
+          subscription_next_payment_date: nextBillingTime,
+        });
+        console.log(`[PayPal Webhook] Subscription ${subId} activated for user ${targetUser.email}. Next payment: ${nextBillingTime}`);
+      }
+    }
+
+    // EVENT: BILLING.SUBSCRIPTION.UPDATED
+    else if (eventType === 'BILLING.SUBSCRIPTION.UPDATED') {
+      const subId = resource?.id;
+      const nextBillingTime = resource?.billing_info?.next_billing_time;
+      const subStatus = resource?.status;
+
+      const targetUser = await findUserBySubscriptionId(subId);
+      if (targetUser) {
+        await updateUser(targetUser._id, {
+          subscription_next_payment_date: nextBillingTime || targetUser.subscription_next_payment_date,
+          subscription_status: subStatus === 'ACTIVE' ? 'active' : subStatus === 'CANCELLED' ? 'cancelled' : targetUser.subscription_status,
         });
       }
-    } else if (eventType === 'BILLING.SUBSCRIPTION.CANCELLED') {
+    }
+
+    // EVENT: BILLING.SUBSCRIPTION.CANCELLED
+    else if (eventType === 'BILLING.SUBSCRIPTION.CANCELLED') {
       const subId = resource?.id;
-      console.log(`Subscription cancelled in PayPal Live: ${subId}`);
-    } else if (eventType === 'BILLING.SUBSCRIPTION.PAYMENT.FAILED') {
-      console.warn(`PayPal subscription payment failed for resource: ${resource?.id}`);
-    } 
-    // Handle Capture Refund events
+      const customId = resource?.custom_id;
+      let targetUser = null;
+      if (customId) targetUser = await findUserById(customId);
+      if (!targetUser && subId) targetUser = await findUserBySubscriptionId(subId);
+
+      if (targetUser) {
+        await updateUser(targetUser._id, {
+          subscription_status: 'cancelled',
+          subscription_cancelled_at: resource?.status_update_time || new Date().toISOString(),
+        });
+        console.log(`[PayPal Webhook] Subscription ${subId} cancelled for user ${targetUser.email}`);
+      }
+    }
+
+    // EVENT: BILLING.SUBSCRIPTION.EXPIRED
+    else if (eventType === 'BILLING.SUBSCRIPTION.EXPIRED') {
+      const subId = resource?.id;
+      const targetUser = await findUserBySubscriptionId(subId);
+      if (targetUser) {
+        await updateUser(targetUser._id, {
+          tier: 'free',
+          subscription_status: 'none',
+        });
+        console.log(`[PayPal Webhook] Subscription ${subId} expired for user ${targetUser.email}. Downgraded to free.`);
+      }
+    }
+
+    // EVENT: BILLING.SUBSCRIPTION.SUSPENDED
+    else if (eventType === 'BILLING.SUBSCRIPTION.SUSPENDED') {
+      const subId = resource?.id;
+      const targetUser = await findUserBySubscriptionId(subId);
+      if (targetUser) {
+        await updateUser(targetUser._id, {
+          subscription_status: 'suspended',
+        });
+      }
+    }
+
+    // EVENT: BILLING.SUBSCRIPTION.PAYMENT.FAILED
+    else if (eventType === 'BILLING.SUBSCRIPTION.PAYMENT.FAILED') {
+      const subId = resource?.id;
+      console.warn(`[PayPal Webhook] Recurring payment failed for subscription: ${subId}`);
+      const targetUser = await findUserBySubscriptionId(subId);
+      if (targetUser) {
+        console.warn(`[PayPal Webhook] User ${targetUser.email} recurring billing payment failed.`);
+      }
+    }
+
+    // EVENT: PAYMENT.SALE.COMPLETED (Recurring monthly renewal payment or initial subscription capture)
+    else if (eventType === 'PAYMENT.SALE.COMPLETED') {
+      const saleId = resource?.id;
+      const subId = resource?.billing_agreement_id;
+      const amountVal = resource?.amount?.total || '4.99';
+      const currencyVal = resource?.amount?.currency || 'USD';
+      const paymentTime = resource?.create_time || new Date().toISOString();
+
+      console.log(`[PayPal Webhook] Recurring Sale Completed: Sale ${saleId}, Subscription ${subId}, Amount: $${amountVal} ${currencyVal}`);
+
+      if (subId) {
+        const targetUser = await findUserBySubscriptionId(subId);
+        if (targetUser) {
+          // Record recurring payment transaction
+          await createTransaction({
+            user_id: targetUser._id,
+            order_id: saleId,
+            capture_id: saleId,
+            subscription_id: subId,
+            payer_email: targetUser.email,
+            amount: amountVal,
+            currency: currencyVal,
+            plan: 'monthly',
+            status: 'COMPLETED',
+            created_at: paymentTime,
+            raw_details: resource,
+          });
+
+          // Keep user account active and update last payment date
+          await updateUser(targetUser._id, {
+            tier: 'pro',
+            subscription_status: 'active',
+            last_payment_date: paymentTime,
+          });
+
+          // Send confirmation email
+          sendPaymentConfirmedEmail(targetUser, 'The Insect Guide - Monthly Pro Membership Renewal', `$${amountVal}`).catch(
+            err => console.warn('[Brevo Warning] Failed to send renewal email:', err)
+          );
+        }
+      }
+    }
+
+    // EVENT: PAYMENT.CAPTURE.REFUNDED or REVERSED
     else if (eventType === 'PAYMENT.CAPTURE.REFUNDED' || eventType === 'PAYMENT.CAPTURE.REVERSED') {
       const captureId = resource?.capture_id || resource?.links?.find((l: any) => l.rel === 'up')?.href?.split('/').pop();
       const refundId = resource?.id;

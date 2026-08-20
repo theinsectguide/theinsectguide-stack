@@ -540,6 +540,43 @@ export async function findTransactionByRefundId(refundId: string): Promise<Trans
   return null;
 }
 
+export async function findUserBySubscriptionId(subId: string): Promise<UserDoc | null> {
+  if (!subId) return null;
+  if (isConnectedToMongo && mongoDb) {
+    const user = await mongoDb.collection('users').findOne({
+      $or: [
+        { paypal_subscription_id: subId },
+        { subscription_id: subId },
+      ],
+    });
+    if (user) return { ...user, _id: user._id.toString() } as unknown as UserDoc;
+    return null;
+  }
+  for (const user of memoryStore.users.values()) {
+    if (user.paypal_subscription_id === subId || user.subscription_id === subId) return user;
+  }
+  return null;
+}
+
+export async function findTransactionBySubscriptionId(subId: string): Promise<TransactionDoc | null> {
+  if (!subId) return null;
+  if (isConnectedToMongo && mongoDb) {
+    const tx = await mongoDb.collection('transactions').findOne({
+      $or: [
+        { subscription_id: subId },
+        { order_id: subId },
+        { capture_id: subId },
+      ],
+    });
+    if (tx) return { ...tx, _id: tx._id.toString() } as unknown as TransactionDoc;
+    return null;
+  }
+  for (const tx of memoryStore.transactions.values()) {
+    if (tx.subscription_id === subId || tx.order_id === subId || tx.capture_id === subId) return tx;
+  }
+  return null;
+}
+
 export async function findFirstCompletedTransactionForUser(userId: string): Promise<TransactionDoc | null> {
   if (!userId) return null;
   const userTxs = await getTransactionsByUserId(userId);
