@@ -1,14 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import { useAuth } from '../context/AuthContext';
 import { PayPalButton } from '../components/PayPalButton';
-import { Check, ShieldCheck, Zap, Sparkles, Crown, Clock, ArrowLeft, UserPlus, LayoutDashboard } from 'lucide-react';
+import { Check, ShieldCheck, Zap, Sparkles, Crown, Clock, ArrowLeft, UserPlus, LayoutDashboard, CheckCircle2 } from 'lucide-react';
 
-const PAYPAL_SCRIPT_OPTIONS = {
-  clientId: 'AVzCfKJSQG7YWcbPj1D6cajYS4WFNPSpUBsyd33bOJ0MZXUryqo3gR_36mgn-pfgrLAWpbr9lzlRhOCD',
+const PAYPAL_CLIENT_ID = 'AVzCfKJSQG7YWcbPj1D6cajYS4WFNPSpUBsyd33bOJ0MZXUryqo3gR_36mgn-pfgrLAWpbr9lzlRhOCD';
+
+const MONTHLY_SCRIPT_OPTIONS = {
+  clientId: PAYPAL_CLIENT_ID,
   currency: 'USD',
   vault: true,
   intent: 'subscription',
+  components: 'buttons',
+  disableFunding: 'bancontact,sofort,giropay,mybank,eps,ideal,sepa,paylater',
+};
+
+const ANNUAL_SCRIPT_OPTIONS = {
+  clientId: PAYPAL_CLIENT_ID,
+  currency: 'USD',
+  intent: 'capture',
   components: 'buttons',
   disableFunding: 'bancontact,sofort,giropay,mybank,eps,ideal,sepa,paylater',
 };
@@ -20,6 +30,7 @@ interface PricingPageProps {
 
 export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate, onGoBack }) => {
   const { user, isPro } = useAuth();
+  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('annual');
 
   const proFeatures = [
     'Unlimited AI Photo Scans with Claude Vision',
@@ -40,7 +51,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate, onGoBack }
         <div className="flex items-center justify-between">
           <button
             onClick={onGoBack}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#242446]/80 hover:bg-[#2e2e56] border border-slate-700/80 text-xs text-slate-300 hover:text-white font-semibold transition-all active:scale-95 group"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#242446]/80 hover:bg-[#2e2e56] border border-slate-700/80 text-xs text-slate-300 hover:text-white font-semibold transition-all active:scale-95 group cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 text-[#10b981] group-hover:-translate-x-0.5 transition-transform" />
             <span>Back</span>
@@ -74,14 +85,14 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate, onGoBack }
           <div className="pt-1 flex items-center justify-center gap-3">
             <button
               onClick={() => onNavigate('register')}
-              className="px-5 py-2 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-black font-display font-extrabold text-xs shadow-md flex items-center gap-1.5 active:scale-95 transition-all"
+              className="px-5 py-2 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-black font-display font-extrabold text-xs shadow-md flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
             >
               <UserPlus className="w-3.5 h-3.5" />
               <span>Create Free Account</span>
             </button>
             <button
               onClick={() => onNavigate('login')}
-              className="px-4 py-2 rounded-xl bg-[#242446] hover:bg-[#2e2e56] border border-slate-700 text-xs text-slate-200 font-semibold transition-all"
+              className="px-4 py-2 rounded-xl bg-[#242446] hover:bg-[#2e2e56] border border-slate-700 text-xs text-slate-200 font-semibold transition-all cursor-pointer"
             >
               Sign In
             </button>
@@ -123,11 +134,52 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate, onGoBack }
         </div>
       )}
 
+      {/* Interactive Plan Selector Switcher */}
+      <div className="flex items-center justify-center pt-2">
+        <div className="inline-flex p-1.5 rounded-2xl bg-[#151528] border border-[#2e2e4e] shadow-xl gap-1">
+          <button
+            onClick={() => setSelectedPlan('monthly')}
+            className={`px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              selectedPlan === 'monthly'
+                ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-[#20203c]'
+            }`}
+          >
+            Monthly Plan ($4.99/mo)
+          </button>
+          <button
+            onClick={() => setSelectedPlan('annual')}
+            className={`px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              selectedPlan === 'annual'
+                ? 'bg-gradient-to-r from-emerald-500 to-[#10b981] text-slate-950 shadow-md shadow-emerald-500/20'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-[#20203c]'
+            }`}
+          >
+            <span>Annual Plan ($29.99/yr)</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-black ${
+              selectedPlan === 'annual' ? 'bg-black/20 text-slate-950' : 'bg-emerald-500/20 text-emerald-400'
+            }`}>
+              Save 50%
+            </span>
+          </button>
+        </div>
+      </div>
+
       {/* 2 Paid Plans Grid: Monthly ($4.99/mo) and Annual ($29.99/yr) */}
-      <PayPalScriptProvider options={PAYPAL_SCRIPT_OPTIONS}>
+      <PayPalScriptProvider
+        key={selectedPlan}
+        options={selectedPlan === 'monthly' ? MONTHLY_SCRIPT_OPTIONS : ANNUAL_SCRIPT_OPTIONS}
+      >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-stretch max-w-4xl mx-auto">
           {/* Monthly Plan Card - NO BADGE */}
-          <div className="rounded-2xl sm:rounded-3xl bg-[#1a1a2e] border border-[#2e2e4e] p-5 sm:p-8 flex flex-col justify-between space-y-5 sm:space-y-6 shadow-xl">
+          <div
+            onClick={() => setSelectedPlan('monthly')}
+            className={`rounded-2xl sm:rounded-3xl p-5 sm:p-8 flex flex-col justify-between space-y-5 sm:space-y-6 shadow-xl transition-all cursor-pointer ${
+              selectedPlan === 'monthly'
+                ? 'bg-[#1e1e38] border-2 border-emerald-500 shadow-emerald-950/60 ring-1 ring-emerald-500/30'
+                : 'bg-[#1a1a2e] border border-[#2e2e4e] hover:border-slate-600 opacity-90'
+            }`}
+          >
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -136,7 +188,9 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate, onGoBack }
                   </h3>
                   <p className="text-xs text-slate-400 mt-0.5">Flexible month-to-month access</p>
                 </div>
-                <span className="px-3 py-1 rounded-full bg-slate-800 text-slate-300 text-xs font-semibold">
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  selectedPlan === 'monthly' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'
+                }`}>
                   Monthly
                 </span>
               </div>
@@ -176,18 +230,36 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate, onGoBack }
                     <span>Accéder à mon Dashboard</span>
                   </button>
                 </div>
-              ) : (
+              ) : selectedPlan === 'monthly' ? (
                 <PayPalButton
                   plan="monthly"
                   price="$4.99/mo"
                   onSuccess={() => onNavigate('dashboard')}
                 />
+              ) : (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedPlan('monthly');
+                  }}
+                  className="w-full py-3 px-4 rounded-xl bg-[#2a2a4c] hover:bg-[#34345e] border border-slate-600 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <span>Select Monthly Plan ($4.99/mo)</span>
+                </button>
               )}
             </div>
           </div>
 
           {/* Annual Plan Card - "Best Value" GREEN BADGE */}
-          <div className="relative rounded-2xl sm:rounded-3xl bg-gradient-to-b from-[#24244c] to-[#1a1a2e] border-2 border-emerald-500/80 p-5 sm:p-8 flex flex-col justify-between space-y-5 sm:space-y-6 shadow-2xl shadow-emerald-950/50 mt-4 md:mt-0">
+          <div
+            onClick={() => setSelectedPlan('annual')}
+            className={`relative rounded-2xl sm:rounded-3xl p-5 sm:p-8 flex flex-col justify-between space-y-5 sm:space-y-6 shadow-2xl transition-all cursor-pointer ${
+              selectedPlan === 'annual'
+                ? 'bg-gradient-to-b from-[#24244c] to-[#1a1a2e] border-2 border-emerald-500 shadow-emerald-950/60 ring-1 ring-emerald-500/40 mt-4 md:mt-0'
+                : 'bg-[#1a1a2e] border border-[#2e2e4e] hover:border-slate-600 opacity-90 mt-4 md:mt-0'
+            }`}
+          >
             {/* Top Pill - Best Value (Green) */}
             <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-[#10b981] text-black font-display font-extrabold text-xs uppercase tracking-wider shadow-lg whitespace-nowrap">
               Best Value — Save 50%
@@ -242,12 +314,23 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate, onGoBack }
                     <span>Accéder à mon Dashboard</span>
                   </button>
                 </div>
-              ) : (
+              ) : selectedPlan === 'annual' ? (
                 <PayPalButton
                   plan="annual"
                   price="$29.99/yr"
                   onSuccess={() => onNavigate('dashboard')}
                 />
+              ) : (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedPlan('annual');
+                  }}
+                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
+                >
+                  <span>Select Annual Pass ($29.99/yr) — Save 50%</span>
+                </button>
               )}
             </div>
           </div>
