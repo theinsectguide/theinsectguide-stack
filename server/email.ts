@@ -2,7 +2,8 @@ import { UserDoc } from './types';
 
 const BREVO_SENDER_EMAIL = 'contact@theinsectguide.com';
 const BREVO_SENDER_NAME = 'The Insect Guide';
-const BREVO_LIST_ID = Number(process.env.BREVO_LIST_ID || 2);
+const rawListId = (process.env.BREVO_LIST_ID || '2').replace(/[^0-9]/g, '');
+const BREVO_LIST_ID = parseInt(rawListId, 10) || 2;
 
 /**
  * Sends a transactional email using Brevo's v3 SMTP API.

@@ -228,37 +228,7 @@ export async function seedAdminUser() {
 export async function seedProtectedUsers() {
   const defaultPassword = await hashPassword('Test1234');
 
-  // 1. Jean-Marc Michiels (Paid Pro User - Monthly Pass $4.99)
-  const jmEmail = 'jmmichiels1981@gmail.com';
-  const jmExisting = await findUserByEmail(jmEmail);
-  if (!jmExisting) {
-    await createUser({
-      email: jmEmail,
-      password: defaultPassword,
-      name: 'Jean-Marc Michiels',
-      region: 'EU',
-      level: 'Master',
-      tier: 'pro',
-      subscription_status: 'active',
-      subscription_plan: 'monthly',
-      role: 'user',
-      created_at: new Date().toISOString(),
-      last_payment_date: new Date().toISOString(),
-      subscription_start: new Date().toISOString(),
-      scans_count: 0,
-      species_found: 0,
-    });
-    console.log(`[Seed] Protected user initialized as Monthly Pro: ${jmEmail}`);
-  } else {
-    await updateUser(jmExisting._id, {
-      password: defaultPassword,
-      tier: 'pro',
-      subscription_status: 'active',
-      subscription_plan: 'monthly',
-    });
-  }
-
-  // 2. Vita Rosa (Free Tier account for payment testing)
+  // Vita Rosa (Free Tier account for payment testing)
   const vitaEmail = 'vitarosa2013@gmail.com';
   const vitaExisting = await findUserByEmail(vitaEmail);
   if (!vitaExisting) {
