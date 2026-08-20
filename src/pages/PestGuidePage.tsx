@@ -39,63 +39,57 @@ interface PestItem {
   exterminatorCost: string;
 }
 
-// Multilingual and taxonomic synonym dictionary for intelligent cross-lingual search
-const SEARCH_SYNONYMS: Record<string, string[]> = {
-  syrphe: ['hoverfly', 'syrphidae', 'episyrphus', 'balteatus', 'flower fly', 'marmalade hoverfly'],
-  syrphes: ['hoverfly', 'syrphidae', 'episyrphus', 'balteatus', 'flower fly', 'marmalade hoverfly'],
-  hoverfly: ['syrphe', 'syrphidae', 'episyrphus', 'balteatus', 'flower fly', 'marmalade hoverfly'],
-  hoverflies: ['syrphe', 'syrphidae', 'episyrphus', 'balteatus', 'flower fly', 'marmalade hoverfly'],
-  abeille: ['honeybee', 'apis mellifera', 'bee', 'western honeybee'],
-  abeilles: ['honeybee', 'apis mellifera', 'bee', 'western honeybee'],
-  honeybee: ['abeille', 'apis mellifera', 'western honeybee'],
-  frelon: ['hornet', 'vespa crabro', 'vespa velutina', 'european hornet', 'asian hornet'],
-  frelons: ['hornet', 'vespa crabro', 'vespa velutina', 'european hornet', 'asian hornet'],
-  hornet: ['frelon', 'vespa crabro', 'vespa velutina'],
-  coccinelle: ['ladybird', 'ladybug', 'coccinella septempunctata', 'seven-spotted ladybird'],
-  coccinelles: ['ladybird', 'ladybug', 'coccinella septempunctata', 'seven-spotted ladybird'],
-  ladybird: ['coccinelle', 'ladybug', 'coccinella septempunctata'],
-  ladybug: ['coccinelle', 'ladybird', 'coccinella septempunctata'],
-  guepe: ['wasp', 'yellowjacket', 'vespula vulgaris', 'polistes dominula', 'paper wasp'],
-  guêpe: ['wasp', 'yellowjacket', 'vespula vulgaris', 'polistes dominula', 'paper wasp'],
-  guepes: ['wasp', 'yellowjacket', 'vespula vulgaris', 'polistes dominula', 'paper wasp'],
-  guêpes: ['wasp', 'yellowjacket', 'vespula vulgaris', 'polistes dominula', 'paper wasp'],
-  wasp: ['guepe', 'guêpe', 'yellowjacket', 'vespula', 'polistes'],
-  punaise: ['bed bug', 'cimex lectularius', 'punaise de lit'],
-  punaises: ['bed bug', 'cimex lectularius', 'punaise de lit'],
-  'punaise de lit': ['bed bug', 'cimex lectularius'],
-  'punaises de lit': ['bed bug', 'cimex lectularius'],
-  'bed bugs': ['punaise de lit', 'cimex lectularius'],
-  'bed bug': ['punaise de lit', 'cimex lectularius'],
-  cafard: ['cockroach', 'blattella germanica', 'blatte'],
-  cafards: ['cockroach', 'blattella germanica', 'blatte'],
-  blatte: ['cockroach', 'blattella germanica', 'cafard'],
-  blattes: ['cockroach', 'blattella germanica', 'cafard'],
-  cockroach: ['cafard', 'blatte', 'blattella germanica'],
-  tique: ['tick', 'ixodes', 'ixodes ricinus', 'ixodes scapularis'],
-  tiques: ['tick', 'ixodes', 'ixodes ricinus', 'ixodes scapularis'],
-  tick: ['tique', 'ixodes ricinus', 'ixodes scapularis'],
-  moustique: ['mosquito', 'aedes albopictus', 'tiger mosquito'],
-  moustiques: ['mosquito', 'aedes albopictus', 'tiger mosquito'],
-  mosquito: ['moustique', 'aedes albopictus'],
-  araignee: ['spider', 'latrodectus', 'loxosceles', 'atrax', 'steatoda'],
-  araignée: ['spider', 'latrodectus', 'loxosceles', 'atrax', 'steatoda'],
-  araignees: ['spider', 'latrodectus', 'loxosceles', 'atrax', 'steatoda'],
-  araignées: ['spider', 'latrodectus', 'loxosceles', 'atrax', 'steatoda'],
-  spider: ['araignee', 'araignée', 'latrodectus', 'loxosceles', 'atrax', 'steatoda'],
-  bourdon: ['bumblebee', 'bombus'],
-  bourdons: ['bumblebee', 'bombus'],
-  bumblebee: ['bourdon', 'bombus'],
-  termite: ['termites', 'reticulitermes'],
-  termites: ['termite', 'reticulitermes'],
-  mite: ['clothes moth', 'tineola bisselliella'],
-  mites: ['clothes moth', 'tineola bisselliella'],
-  'clothes moth': ['mite', 'tineola bisselliella'],
-  lucane: ['stag beetle', 'lucanus cervus', 'cerf-volant'],
-  'cerf-volant': ['stag beetle', 'lucanus cervus'],
-  'stag beetle': ['lucane', 'lucanus cervus'],
-  taon: ['horsefly', 'tabanus', 'cleg', 'tabanidae'],
-  taons: ['horsefly', 'tabanus', 'cleg', 'tabanidae'],
-  horsefly: ['taon', 'tabanus', 'cleg', 'tabanidae'],
+// Taxonomic and multilingual identity dictionary (Strict Identity Tokens ONLY: No descriptions, habitats, or free text)
+const IDENTITY_MAP: Record<string, string[]> = {
+  // Syrphidae / Hoverfly
+  'syrphidae': ['syrphe', 'syrphes', 'hoverfly', 'hoverflies', 'flower fly', 'marmalade hoverfly', 'episyrphus balteatus', 'episyrphus', 'balteatus', 'syrphidae'],
+  // Apis mellifera / Honeybee
+  'apis-mellifera': ['abeille', 'abeilles', 'abeille europeenne', 'abeille domestique', 'honeybee', 'honeybees', 'honey bee', 'western honeybee', 'apis mellifera', 'apis'],
+  // Vespa crabro / European Hornet
+  'vespa-crabro': ['frelon', 'frelons', 'frelon europeen', 'frelon d europe', 'european hornet', 'vespa crabro', 'hornet', 'crabro', 'vespa'],
+  // Vespa velutina / Asian Hornet (mapped to both pest ID and encyclopedia ID)
+  'asian-hornet': ['frelon', 'frelons', 'frelon asiatique', 'asian hornet', 'yellow-legged hornet', 'yellow legged asian hornet', 'vespa velutina', 'velutina', 'hornet', 'vespa'],
+  'vespa-velutina': ['frelon', 'frelons', 'frelon asiatique', 'asian hornet', 'yellow-legged hornet', 'yellow legged asian hornet', 'vespa velutina', 'velutina', 'hornet', 'vespa'],
+  // Vespula vulgaris / Yellowjacket
+  'vespula-vulgaris': ['guepe', 'guepes', 'guêpe', 'guêpes', 'wasp', 'wasps', 'yellowjacket', 'yellowjackets', 'common yellowjacket', 'vespula vulgaris', 'vespula'],
+  // Polistes dominula / Paper Wasp
+  'polistes-dominula': ['guepe', 'guepes', 'guêpe', 'guêpes', 'wasp', 'wasps', 'paper wasp', 'european paper wasp', 'polistes dominula', 'polistes'],
+  // Bombus / Bumblebee
+  'bombus-spp': ['bourdon', 'bourdons', 'bumblebee', 'bumblebees', 'bombus'],
+  // Coccinella septempunctata / Ladybird
+  'coccinella-septempunctata': ['coccinelle', 'coccinelles', 'coccinelle a 7 points', 'ladybird', 'ladybirds', 'ladybug', 'ladybugs', 'seven-spotted ladybird', 'coccinella septempunctata', 'coccinella'],
+  // Bed bugs
+  'bed-bugs': ['punaise', 'punaises', 'punaise de lit', 'punaises de lit', 'bed bug', 'bed bugs', 'common bed bug', 'cimex lectularius', 'cimex'],
+  'cimex-lectularius': ['punaise', 'punaises', 'punaise de lit', 'punaises de lit', 'bed bug', 'bed bugs', 'common bed bug', 'cimex lectularius', 'cimex'],
+  // German Cockroach
+  'german-cockroach': ['cafard', 'cafards', 'blatte', 'blattes', 'blatte germanique', 'cockroach', 'cockroaches', 'german cockroach', 'blattella germanica', 'blattella'],
+  'blattella-germanica': ['cafard', 'cafards', 'blatte', 'blattes', 'blatte germanique', 'cockroach', 'cockroaches', 'german cockroach', 'blattella germanica', 'blattella'],
+  // Subterranean Termites
+  'subterranean-termites': ['termite', 'termites', 'reticulitermes', 'reticulitermes flavipes', 'subterranean termites'],
+  // Ticks
+  'ixodes-scapularis': ['tique', 'tiques', 'tique a pattes noires', 'deer tick', 'blacklegged tick', 'ixodes scapularis', 'ixodes'],
+  'ixodes-ricinus': ['tique', 'tiques', 'tique du mouton', 'castor bean tick', 'sheep tick', 'ixodes ricinus', 'ixodes'],
+  // Asian Tiger Mosquito
+  'tiger-mosquito': ['moustique', 'moustiques', 'moustique tigre', 'asian tiger mosquito', 'tiger mosquito', 'mosquito', 'aedes albopictus', 'aedes'],
+  'aedes-albopictus': ['moustique', 'moustiques', 'moustique tigre', 'asian tiger mosquito', 'tiger mosquito', 'mosquito', 'aedes albopictus', 'aedes'],
+  // Clothes Moth
+  'clothes-moth': ['mite', 'mites', 'mite des vetements', 'clothes moth', 'common clothes moth', 'tineola bisselliella', 'tineola'],
+  'tineola-bisselliella': ['mite', 'mites', 'mite des vetements', 'clothes moth', 'common clothes moth', 'tineola bisselliella', 'tineola'],
+  // Stag Beetle
+  'lucanus-cervus': ['lucane', 'lucane cerf-volant', 'cerf-volant', 'stag beetle', 'lucanus cervus', 'lucanus'],
+  // Horsefly
+  'tabanus-bovinus': ['taon', 'taons', 'taon des boeufs', 'horsefly', 'horseflies', 'cleg', 'tabanidae', 'tabanus'],
+  // Spiders
+  'atrox-robustus': ['sydney funnel-web spider', 'funnel-web spider', 'atrax robustus', 'atrax', 'araignee', 'spider'],
+  'loxosceles-reclusa': ['brown recluse spider', 'recluse spider', 'loxosceles reclusa', 'loxosceles', 'araignee violon', 'araignee', 'spider'],
+  'latrodectus-hasselti': ['redback spider', 'latrodectus hasselti', 'latrodectus', 'veuve noire', 'araignee', 'spider'],
+  'latrodectus-hesperus': ['western black widow spider', 'black widow', 'latrodectus hesperus', 'latrodectus', 'veuve noire', 'araignee', 'spider'],
+  'steatoda-nobilis': ['noble false black widow', 'false black widow', 'steatoda nobilis', 'steatoda', 'fausse veuve noire', 'araignee', 'spider'],
+  // Fire ant & Carpenter ant
+  'solenopsis-invicta': ['red imported fire ant', 'fire ant', 'solenopsis invicta', 'solenopsis', 'fourmi de feu', 'fourmi', 'ant'],
+  'carpenter-ants': ['black carpenter ant', 'carpenter ant', 'carpenter ants', 'camponotus pennsylvanicus', 'camponotus', 'fourmi charpentiere', 'fourmi', 'ant'],
+  // Carpet beetle
+  'carpet-beetle': ['varied carpet beetle', 'carpet beetle', 'anthrenus verbasci', 'anthrenus', 'anthrene'],
 };
 
 function normalizeText(text: string): string {
@@ -103,7 +97,81 @@ function normalizeText(text: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
+}
+
+function levenshteinDistance(a: string, b: string): number {
+  if (a === b) return 0;
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  const matrix: number[][] = [];
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
+function matchStrictIdentity(query: string, id: string, commonName: string, latinName: string): boolean {
+  const normQuery = normalizeText(query);
+  if (!normQuery) return false;
+
+  const directNames = [
+    normalizeText(commonName),
+    normalizeText(latinName),
+    normalizeText(id.replace(/-/g, ' ')),
+  ];
+
+  // Genus (first word of latin name)
+  const genus = normalizeText(latinName.split(' ')[0]);
+  if (genus.length >= 3) directNames.push(genus);
+
+  // Synonyms and aliases from strict IDENTITY_MAP
+  const aliases = (IDENTITY_MAP[id] || []).map(normalizeText);
+  const allIdentityTokens = [...directNames, ...aliases];
+
+  // 1. Direct exact or substring match on identity tokens
+  for (const token of allIdentityTokens) {
+    if (token === normQuery) return true;
+    if (token.includes(normQuery) && normQuery.length >= 3) return true;
+    if (normQuery.includes(token) && token.length >= 4) return true;
+  }
+
+  // 2. Word-by-word token match for multi-word queries (e.g. 'episyrphus balteatus', 'asian hornet')
+  const queryWords = normQuery.split(' ').filter((w) => w.length >= 3);
+  if (queryWords.length > 1) {
+    const combinedDirect = directNames.join(' ');
+    if (queryWords.every((w) => combinedDirect.includes(w))) return true;
+  }
+
+  // 3. Limited typo tolerance (Levenshtein distance <= 1 for queries of 5+ chars against exact identity words)
+  if (normQuery.length >= 5) {
+    for (const token of allIdentityTokens) {
+      if (Math.abs(token.length - normQuery.length) <= 1 && levenshteinDistance(token, normQuery) <= 1) {
+        return true;
+      }
+      for (const word of token.split(' ')) {
+        if (word.length >= 5 && Math.abs(word.length - normQuery.length) <= 1 && levenshteinDistance(word, normQuery) <= 1) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
 }
 
 export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void; onGoBack?: () => void }> = ({ onNavigate, onGoBack }) => {
@@ -380,32 +448,24 @@ export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void; onGoBa
 
   const normQuery = normalizeText(searchQuery);
 
-  // Derive search terms & multilingual synonyms
-  const queryTerms = normQuery
-    ? Array.from(new Set([normQuery, ...(SEARCH_SYNONYMS[normQuery] || []).map(normalizeText)]))
-    : [];
-
-  // Filter Pest items (Priority Pest Guide Source)
+  // 1. Filter Pest items (Priority Pest Guide Source - Strict Identity only)
   const filteredPests = pests.filter((p) => {
     const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
     if (!normQuery) return matchesCategory;
 
-    const pestCorpus = normalizeText(
-      `${p.name} ${p.latin} ${p.category} ${p.signs.join(' ')} ${p.treatment.join(' ')} ${p.naturalRemedy} ${p.prevention}`
-    );
-
-    const matchesSearch =
-      queryTerms.some((term) => pestCorpus.includes(term)) ||
-      normQuery.split(/\s+/).every((word) => pestCorpus.includes(word));
-
+    const matchesSearch = matchStrictIdentity(normQuery, p.id, p.name, p.latin);
     return matchesSearch && matchesCategory;
   });
 
-  // Filter Encyclopedia items (Encyclopedia Source)
+  // 2. Filter Encyclopedia items (Encyclopedia Source - Strict Identity only)
   const filteredEncyclopedia = encyclopediaSpecies.filter((sp) => {
     if (!normQuery) return false;
 
-    // Rule 6: Avoid redundant duplicates if already displayed in filteredPests
+    // Strict identity match first
+    const isMatch = matchStrictIdentity(normQuery, sp.id, sp.common_name, sp.latin_name);
+    if (!isMatch) return false;
+
+    // Rule: Avoid redundant duplicates if already displayed in filteredPests (Pest Guide priority)
     const alreadyInPests = filteredPests.some((pest) => {
       const pestNormLatin = normalizeText(pest.latin);
       const pestNormName = normalizeText(pest.name);
@@ -415,20 +475,16 @@ export const PestGuidePage: React.FC<{ onNavigate: (tab: string) => void; onGoBa
         spNormLatin.includes(pestNormLatin) ||
         pestNormLatin.includes(spNormLatin) ||
         spNormCommon.includes(pestNormName) ||
-        pestNormName.includes(spNormCommon)
+        pestNormName.includes(spNormCommon) ||
+        (pest.id === 'asian-hornet' && sp.id === 'vespa-velutina') ||
+        (pest.id === 'bed-bugs' && sp.id === 'cimex-lectularius') ||
+        (pest.id === 'german-cockroach' && sp.id === 'blattella-germanica') ||
+        (pest.id === 'tiger-mosquito' && sp.id === 'aedes-albopictus') ||
+        (pest.id === 'clothes-moth' && sp.id === 'tineola-bisselliella')
       );
     });
 
-    if (alreadyInPests) return false;
-
-    const speciesCorpus = normalizeText(
-      `${sp.common_name} ${sp.latin_name} ${sp.category} ${sp.description} ${sp.habitat} ${(sp.look_alikes || []).join(' ')} ${sp.fun_fact || ''}`
-    );
-
-    return (
-      queryTerms.some((term) => speciesCorpus.includes(term)) ||
-      normQuery.split(/\s+/).every((word) => speciesCorpus.includes(word))
-    );
+    return !alreadyInPests;
   });
 
   const hasSearchActive = normQuery.length > 0;
