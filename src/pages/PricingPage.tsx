@@ -1,7 +1,17 @@
 import React from 'react';
+import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import { useAuth } from '../context/AuthContext';
 import { PayPalButton } from '../components/PayPalButton';
 import { Check, ShieldCheck, Zap, Sparkles, Crown, Clock, ArrowLeft, UserPlus, LayoutDashboard } from 'lucide-react';
+
+const PAYPAL_SCRIPT_OPTIONS = {
+  clientId: 'AVzCfKJSQG7YWcbPj1D6cajYS4WFNPSpUBsyd33bOJ0MZXUryqo3gR_36mgn-pfgrLAWpbr9lzlRhOCD',
+  currency: 'USD',
+  vault: true,
+  intent: 'subscription',
+  components: 'buttons',
+  disableFunding: 'bancontact,sofort,giropay,mybank,eps,ideal,sepa,paylater',
+};
 
 interface PricingPageProps {
   onNavigate: (tab: string) => void;
@@ -114,133 +124,135 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate, onGoBack }
       )}
 
       {/* 2 Paid Plans Grid: Monthly ($4.99/mo) and Annual ($29.99/yr) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-stretch max-w-4xl mx-auto">
-        {/* Monthly Plan Card - NO BADGE */}
-        <div className="rounded-2xl sm:rounded-3xl bg-[#1a1a2e] border border-[#2e2e4e] p-5 sm:p-8 flex flex-col justify-between space-y-5 sm:space-y-6 shadow-xl">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
+      <PayPalScriptProvider options={PAYPAL_SCRIPT_OPTIONS}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-stretch max-w-4xl mx-auto">
+          {/* Monthly Plan Card - NO BADGE */}
+          <div className="rounded-2xl sm:rounded-3xl bg-[#1a1a2e] border border-[#2e2e4e] p-5 sm:p-8 flex flex-col justify-between space-y-5 sm:space-y-6 shadow-xl">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-display font-bold text-lg sm:text-xl text-white">
+                    Monthly Plan
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Flexible month-to-month access</p>
+                </div>
+                <span className="px-3 py-1 rounded-full bg-slate-800 text-slate-300 text-xs font-semibold">
+                  Monthly
+                </span>
+              </div>
+
               <div>
-                <h3 className="font-display font-bold text-lg sm:text-xl text-white">
-                  Monthly Plan
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">Flexible month-to-month access</p>
+                <div className="text-3xl sm:text-4xl font-display font-black text-white">
+                  $4.99 <span className="text-xs sm:text-sm text-slate-400 font-normal">/ month</span>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Billed monthly • Cancel anytime
+                </p>
               </div>
-              <span className="px-3 py-1 rounded-full bg-slate-800 text-slate-300 text-xs font-semibold">
-                Monthly
-              </span>
+
+              <ul className="space-y-2.5 pt-2 text-xs text-slate-200">
+                {proFeatures.map((f, i) => (
+                  <li key={i} className="flex items-start gap-2.5">
+                    <Check className="w-4 h-4 text-[#10b981] shrink-0 mt-0.5" />
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            <div>
-              <div className="text-3xl sm:text-4xl font-display font-black text-white">
-                $4.99 <span className="text-xs sm:text-sm text-slate-400 font-normal">/ month</span>
-              </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Billed monthly • Cancel anytime
-              </p>
+            {/* Payment Area */}
+            <div className="pt-2 border-t border-slate-700/80 space-y-3">
+              {isPro ? (
+                <div className="p-4 rounded-2xl bg-emerald-950/60 border border-[#10b981] text-center space-y-2">
+                  <span className="text-xs font-bold text-[#10b981]">PRO MEMBERSHIP ACTIVE</span>
+                  <p className="text-[11px] text-slate-300">
+                    You have full unlimited access to all features.
+                  </p>
+                  <button
+                    onClick={() => onNavigate('dashboard')}
+                    className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98 cursor-pointer"
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span>Accéder à mon Dashboard</span>
+                  </button>
+                </div>
+              ) : (
+                <PayPalButton
+                  plan="monthly"
+                  price="$4.99/mo"
+                  onSuccess={() => onNavigate('dashboard')}
+                />
+              )}
             </div>
-
-            <ul className="space-y-2.5 pt-2 text-xs text-slate-200">
-              {proFeatures.map((f, i) => (
-                <li key={i} className="flex items-start gap-2.5">
-                  <Check className="w-4 h-4 text-[#10b981] shrink-0 mt-0.5" />
-                  <span>{f}</span>
-                </li>
-              ))}
-            </ul>
           </div>
 
-          {/* Payment Area */}
-          <div className="pt-2 border-t border-slate-700/80 space-y-3">
-            {isPro ? (
-              <div className="p-4 rounded-2xl bg-emerald-950/60 border border-[#10b981] text-center space-y-2">
-                <span className="text-xs font-bold text-[#10b981]">PRO MEMBERSHIP ACTIVE</span>
-                <p className="text-[11px] text-slate-300">
-                  You have full unlimited access to all features.
-                </p>
-                <button
-                  onClick={() => onNavigate('dashboard')}
-                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98 cursor-pointer"
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  <span>Accéder à mon Dashboard</span>
-                </button>
+          {/* Annual Plan Card - "Best Value" GREEN BADGE */}
+          <div className="relative rounded-2xl sm:rounded-3xl bg-gradient-to-b from-[#24244c] to-[#1a1a2e] border-2 border-emerald-500/80 p-5 sm:p-8 flex flex-col justify-between space-y-5 sm:space-y-6 shadow-2xl shadow-emerald-950/50 mt-4 md:mt-0">
+            {/* Top Pill - Best Value (Green) */}
+            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-[#10b981] text-black font-display font-extrabold text-xs uppercase tracking-wider shadow-lg whitespace-nowrap">
+              Best Value — Save 50%
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-display font-bold text-lg sm:text-xl text-white flex items-center gap-2">
+                    <span>Annual Plan</span>
+                    <Crown className="w-4 h-4 text-amber-400 shrink-0" />
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-0.5">Complete year-round protection</p>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-[#10b981] text-[11px] font-bold">
+                  50% OFF
+                </span>
               </div>
-            ) : (
-              <PayPalButton
-                plan="monthly"
-                price="$4.99/mo"
-                onSuccess={() => onNavigate('dashboard')}
-              />
-            )}
+
+              <div>
+                <div className="text-3xl sm:text-4xl font-display font-black text-white">
+                  $29.99 <span className="text-xs sm:text-sm text-slate-400 font-normal">/ year</span>
+                </div>
+                <p className="text-xs text-[#10b981] font-semibold mt-0.5">
+                  Just $2.49/month • Billed annually ($29.99/yr)
+                </p>
+              </div>
+
+              <ul className="space-y-2.5 pt-2 text-xs text-slate-200">
+                {proFeatures.map((f, i) => (
+                  <li key={i} className="flex items-start gap-2.5">
+                    <Check className="w-4 h-4 text-[#10b981] shrink-0 mt-0.5" />
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Payment Area */}
+            <div className="pt-2 border-t border-slate-700/80 space-y-3">
+              {isPro ? (
+                <div className="p-4 rounded-2xl bg-emerald-950/60 border border-[#10b981] text-center space-y-2">
+                  <span className="text-xs font-bold text-[#10b981]">PRO MEMBERSHIP ACTIVE</span>
+                  <p className="text-[11px] text-slate-300">
+                    You have full unlimited access to all features.
+                  </p>
+                  <button
+                    onClick={() => onNavigate('dashboard')}
+                    className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98 cursor-pointer"
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span>Accéder à mon Dashboard</span>
+                  </button>
+                </div>
+              ) : (
+                <PayPalButton
+                  plan="annual"
+                  price="$29.99/yr"
+                  onSuccess={() => onNavigate('dashboard')}
+                />
+              )}
+            </div>
           </div>
         </div>
-
-        {/* Annual Plan Card - "Best Value" GREEN BADGE */}
-        <div className="relative rounded-2xl sm:rounded-3xl bg-gradient-to-b from-[#24244c] to-[#1a1a2e] border-2 border-emerald-500/80 p-5 sm:p-8 flex flex-col justify-between space-y-5 sm:space-y-6 shadow-2xl shadow-emerald-950/50 mt-4 md:mt-0">
-          {/* Top Pill - Best Value (Green) */}
-          <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-[#10b981] text-black font-display font-extrabold text-xs uppercase tracking-wider shadow-lg whitespace-nowrap">
-            Best Value — Save 50%
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-display font-bold text-lg sm:text-xl text-white flex items-center gap-2">
-                  <span>Annual Plan</span>
-                  <Crown className="w-4 h-4 text-amber-400 shrink-0" />
-                </h3>
-                <p className="text-xs text-slate-300 mt-0.5">Complete year-round protection</p>
-              </div>
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-[#10b981] text-[11px] font-bold">
-                50% OFF
-              </span>
-            </div>
-
-            <div>
-              <div className="text-3xl sm:text-4xl font-display font-black text-white">
-                $29.99 <span className="text-xs sm:text-sm text-slate-400 font-normal">/ year</span>
-              </div>
-              <p className="text-xs text-[#10b981] font-semibold mt-0.5">
-                Just $2.49/month • Billed annually ($29.99/yr)
-              </p>
-            </div>
-
-            <ul className="space-y-2.5 pt-2 text-xs text-slate-200">
-              {proFeatures.map((f, i) => (
-                <li key={i} className="flex items-start gap-2.5">
-                  <Check className="w-4 h-4 text-[#10b981] shrink-0 mt-0.5" />
-                  <span>{f}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Payment Area */}
-          <div className="pt-2 border-t border-slate-700/80 space-y-3">
-            {isPro ? (
-              <div className="p-4 rounded-2xl bg-emerald-950/60 border border-[#10b981] text-center space-y-2">
-                <span className="text-xs font-bold text-[#10b981]">PRO MEMBERSHIP ACTIVE</span>
-                <p className="text-[11px] text-slate-300">
-                  You have full unlimited access to all features.
-                </p>
-                <button
-                  onClick={() => onNavigate('dashboard')}
-                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98 cursor-pointer"
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  <span>Accéder à mon Dashboard</span>
-                </button>
-              </div>
-            ) : (
-              <PayPalButton
-                plan="annual"
-                price="$29.99/yr"
-                onSuccess={() => onNavigate('dashboard')}
-              />
-            )}
-          </div>
-        </div>
-      </div>
+      </PayPalScriptProvider>
 
       {/* 48-HOUR MONEY-BACK GUARANTEE BOX UNDER THE PLANS */}
       <div className="max-w-2xl mx-auto space-y-2">

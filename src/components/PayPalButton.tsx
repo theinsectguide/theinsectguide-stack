@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
+import { PayPalButtons } from '@paypal/react-paypal-js';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, Loader2, CheckCircle2, AlertCircle, Lock, LayoutDashboard, Sparkles, ArrowRight, RefreshCw } from 'lucide-react';
+import { ShieldCheck, Loader2, CheckCircle2, AlertCircle, Lock, LayoutDashboard, Sparkles, ArrowRight } from 'lucide-react';
 
 interface PayPalButtonProps {
   plan: 'monthly' | 'annual';
@@ -15,7 +15,6 @@ export const PayPalButton: React.FC<PayPalButtonProps> = ({ plan, price, onSucce
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cancelMsg, setCancelMsg] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
-  const [clientId, setClientId] = useState<string>('AffnRM3aLTLlYUT538UDsDxpM4MqrBrrCt-2Ihl9L4TDKgVLsmiTjE8qdmO-CrHi7HqgS6fOnlQOmmYV');
   const [monthlyPlanId, setMonthlyPlanId] = useState<string>('P-1VK52313VC6878320NKDSNEY');
 
   useEffect(() => {
@@ -23,9 +22,6 @@ export const PayPalButton: React.FC<PayPalButtonProps> = ({ plan, price, onSucce
     fetch('/api/paypal/config')
       .then((res) => res.json())
       .then((data) => {
-        if (data.clientId) {
-          setClientId(data.clientId);
-        }
         if (data.monthlyPlanId) {
           setMonthlyPlanId(data.monthlyPlanId);
         }
@@ -92,202 +88,173 @@ export const PayPalButton: React.FC<PayPalButtonProps> = ({ plan, price, onSucce
         </div>
       )}
 
-      {/* Official PayPal SDK Buttons Provider */}
-      <PayPalScriptProvider
-        options={{
-          clientId: clientId,
-          currency: 'USD',
-          vault: isMonthlyRecurring ? true : undefined,
-          intent: isMonthlyRecurring ? 'subscription' : 'capture',
-          components: 'buttons',
-          disableFunding: 'bancontact,sofort,giropay,mybank,eps,ideal,sepa,paylater',
-        }}
-      >
-        <div className="min-h-[44px]">
-          {isMonthlyRecurring ? (
-            /* MONTHLY RECURRING SUBSCRIPTION BUTTON (v1/billing/subscriptions) */
-            <PayPalButtons
-              style={{
-                layout: 'vertical',
-                color: 'gold',
-                shape: 'rect',
-                label: 'subscribe',
-                height: 44,
-              }}
-              disabled={loading}
-              createSubscription={async (data, actions) => {
-                setErrorMsg(null);
-                setCancelMsg(null);
-                setLoading(true);
+      <div className="min-h-[44px]">
+        {isMonthlyRecurring ? (
+          /* MONTHLY RECURRING SUBSCRIPTION BUTTON (v1/billing/subscriptions) */
+          <PayPalButtons
+            key="paypal-monthly-subscription-button"
+            style={{
+              layout: 'vertical',
+              color: 'gold',
+              shape: 'rect',
+              label: 'subscribe',
+              height: 44,
+            }}
+            disabled={loading}
+            createSubscription={async (data, actions) => {
+              setErrorMsg(null);
+              setCancelMsg(null);
+              setLoading(true);
 
-                try {
-                  if (monthlyPlanId) {
-                    setLoading(false);
-                    return actions.subscription.create({
-                      plan_id: monthlyPlanId,
-                      custom_id: user?.id,
-                      application_context: {
-                        brand_name: 'The Insect Guide',
-                        shipping_preference: 'NO_SHIPPING',
-                        user_action: 'SUBSCRIBE_NOW',
-                      },
-                    });
-                  }
-
-                  // Fallback: server-side subscription creation
-                  const res = await fetch('/api/paypal/create-subscription', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      Authorization: `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({ plan: 'monthly' }),
-                  });
-
-                  const subData = await res.json();
-                  if (!res.ok || !subData.subscriptionID) {
-                    throw new Error(subData.error || 'Impossible d\'initialiser l\'abonnement récurrent.');
-                  }
-
-                  setLoading(false);
-                  return subData.subscriptionID;
-                } catch (err: any) {
-                  setLoading(false);
-                  setErrorMsg(err.message || 'Erreur lors de l\'initialisation de l\'abonnement PayPal.');
-                  throw err;
-                }
-              }}
-              onApprove={async (data) => {
-                setLoading(true);
-                setErrorMsg(null);
-
-                try {
-                  const res = await fetch('/api/paypal/verify-subscription', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      Authorization: `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({
-                      subscriptionID: data.subscriptionID,
-                      orderID: data.orderID,
-                      plan: 'monthly',
-                    }),
-                  });
-
-                  const verifyResult = await res.json();
-
-                  if (!res.ok || !verifyResult.success || verifyResult.status !== 'ACTIVE') {
-                    throw new Error(
-                      verifyResult.error || 'L\'abonnement récurrent n\'a pas pu être validé. Accès Pro non accordé.'
-                    );
-                  }
-
-                  await refreshUser();
-                  setCompleted(true);
-                } catch (err: any) {
-                  console.error('[PayPal Subscription onApprove Error]', err);
-                  setErrorMsg(err.message || 'Échec de la validation de l\'abonnement.');
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              onCancel={() => {
+              try {
+                const targetPlanId = monthlyPlanId || 'P-1VK52313VC6878320NKDSNEY';
                 setLoading(false);
-                setCancelMsg('Abonnement annulé. Votre compte reste en formule gratuite.');
-              }}
-              onError={(err) => {
+                return actions.subscription.create({
+                  plan_id: targetPlanId,
+                  custom_id: user?.id,
+                  application_context: {
+                    brand_name: 'The Insect Guide',
+                    shipping_preference: 'NO_SHIPPING',
+                    user_action: 'SUBSCRIBE_NOW',
+                  },
+                });
+              } catch (err: any) {
                 setLoading(false);
-                console.error('[PayPal Subscription SDK Error]', err);
-                setErrorMsg('Une erreur est survenue lors de l\'abonnement. Veuillez réessayer.');
-              }}
-            />
-          ) : (
-            /* ANNUAL PASS CAPTURE BUTTON (1-Year Pass $29.99) */
-            <PayPalButtons
-              style={{
-                layout: 'vertical',
-                color: 'gold',
-                shape: 'rect',
-                label: 'pay',
-                height: 44,
-              }}
-              disabled={loading}
-              createOrder={async () => {
-                setErrorMsg(null);
-                setCancelMsg(null);
-                setLoading(true);
+                setErrorMsg(err.message || 'Erreur lors de l\'initialisation de l\'abonnement PayPal.');
+                throw err;
+              }
+            }}
+            onApprove={async (data) => {
+              setLoading(true);
+              setErrorMsg(null);
 
-                try {
-                  const res = await fetch('/api/paypal/create-order', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      Authorization: `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({ plan: 'annual' }),
-                  });
+              try {
+                const res = await fetch('/api/paypal/verify-subscription', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({
+                    subscriptionID: data.subscriptionID,
+                    orderID: data.orderID,
+                    plan: 'monthly',
+                  }),
+                });
 
-                  const data = await res.json();
-                  if (!res.ok || !data.orderID) {
-                    throw new Error(data.error || 'Impossible de créer la commande PayPal.');
-                  }
+                const verifyResult = await res.json();
 
-                  setLoading(false);
-                  return data.orderID;
-                } catch (err: any) {
-                  setLoading(false);
-                  setErrorMsg(err.message || 'Erreur lors de la création de la commande PayPal.');
-                  throw err;
+                if (!res.ok || !verifyResult.success || verifyResult.status !== 'ACTIVE') {
+                  throw new Error(
+                    verifyResult.error || 'L\'abonnement récurrent n\'a pas pu être validé. Accès Pro non accordé.'
+                  );
                 }
-              }}
-              onApprove={async (data) => {
-                setLoading(true);
-                setErrorMsg(null);
 
-                try {
-                  const res = await fetch('/api/paypal/capture-order', {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      Authorization: `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({
-                      orderID: data.orderID,
-                      plan: 'annual',
-                    }),
-                  });
+                await refreshUser();
+                setCompleted(true);
+              } catch (err: any) {
+                console.error('[PayPal Subscription onApprove Error]', err);
+                setErrorMsg(err.message || 'Échec de la validation de l\'abonnement.');
+              } finally {
+                setLoading(false);
+              }
+            }}
+            onCancel={() => {
+              setLoading(false);
+              setCancelMsg('Abonnement annulé. Votre compte reste en formule gratuite.');
+            }}
+            onError={(err) => {
+              setLoading(false);
+              console.error('[PayPal Subscription SDK Error]', err);
+              setErrorMsg('Une erreur est survenue lors de l\'abonnement. Veuillez réessayer.');
+            }}
+          />
+        ) : (
+          /* ANNUAL PASS CAPTURE BUTTON (1-Year Pass $29.99) */
+          <PayPalButtons
+            key="paypal-annual-order-button"
+            style={{
+              layout: 'vertical',
+              color: 'gold',
+              shape: 'rect',
+              label: 'pay',
+              height: 44,
+            }}
+            disabled={loading}
+            createOrder={async () => {
+              setErrorMsg(null);
+              setCancelMsg(null);
+              setLoading(true);
 
-                  const captureResult = await res.json();
+              try {
+                const res = await fetch('/api/paypal/create-order', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({ plan: 'annual' }),
+                });
 
-                  if (!res.ok || !captureResult.success || captureResult.status !== 'COMPLETED') {
-                    throw new Error(
-                      captureResult.error || 'Le paiement n\'a pas pu être validé. Accès Pro non accordé.'
-                    );
-                  }
-
-                  await refreshUser();
-                  setCompleted(true);
-                } catch (err: any) {
-                  console.error('[PayPal onApprove Error]', err);
-                  setErrorMsg(err.message || 'Échec de la validation du paiement.');
-                } finally {
-                  setLoading(false);
+                const data = await res.json();
+                if (!res.ok || !data.orderID) {
+                  throw new Error(data.error || 'Impossible de créer la commande PayPal.');
                 }
-              }}
-              onCancel={() => {
+
                 setLoading(false);
-                setCancelMsg('Transaction annulée. Votre compte reste en formule gratuite.');
-              }}
-              onError={(err) => {
+                return data.orderID;
+              } catch (err: any) {
                 setLoading(false);
-                console.error('[PayPal SDK Error]', err);
-                setErrorMsg('Une erreur est survenue lors du paiement. Veuillez vérifier vos informations.');
-              }}
-            />
-          )}
-        </div>
-      </PayPalScriptProvider>
+                setErrorMsg(err.message || 'Erreur lors de la création de la commande PayPal.');
+                throw err;
+              }
+            }}
+            onApprove={async (data) => {
+              setLoading(true);
+              setErrorMsg(null);
+
+              try {
+                const res = await fetch('/api/paypal/capture-order', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({
+                    orderID: data.orderID,
+                    plan: 'annual',
+                  }),
+                });
+
+                const captureResult = await res.json();
+
+                if (!res.ok || !captureResult.success || captureResult.status !== 'COMPLETED') {
+                  throw new Error(
+                    captureResult.error || 'Le paiement n\'a pas pu être validé. Accès Pro non accordé.'
+                  );
+                }
+
+                await refreshUser();
+                setCompleted(true);
+              } catch (err: any) {
+                console.error('[PayPal onApprove Error]', err);
+                setErrorMsg(err.message || 'Échec de la validation du paiement.');
+              } finally {
+                setLoading(false);
+              }
+            }}
+            onCancel={() => {
+              setLoading(false);
+              setCancelMsg('Transaction annulée. Votre compte reste en formule gratuite.');
+            }}
+            onError={(err) => {
+              setLoading(false);
+              console.error('[PayPal SDK Error]', err);
+              setErrorMsg('Une erreur est survenue lors du paiement. Veuillez vérifier vos informations.');
+            }}
+          />
+        )}
+      </div>
 
       {/* Guarantee Notice */}
       <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 pt-1">
