@@ -460,11 +460,49 @@ export const EncyclopediaPage: React.FC<{ onNavigate: (tab: string) => void; onG
               </div>
             </div>
 
-            {/* Habitat */}
-            <div className="p-3.5 rounded-xl bg-[#141424] border border-slate-800 space-y-1 text-xs">
-              <span className="font-semibold text-slate-300 block">Typical Habitat &amp; Environment:</span>
-              <p className="text-slate-400 leading-relaxed">{activeSpecies.habitat}</p>
+            {/* Habitat & Season Details */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <div className="p-3.5 rounded-xl bg-[#141424] border border-slate-800 space-y-1">
+                <span className="font-semibold text-slate-300 block flex items-center gap-1.5">
+                  <Leaf className="w-3.5 h-3.5 text-emerald-400" />
+                  Typical Habitat:
+                </span>
+                <p className="text-slate-400 leading-relaxed text-[11px] sm:text-xs">{activeSpecies.habitat}</p>
+              </div>
+              <div className="p-3.5 rounded-xl bg-[#141424] border border-slate-800 space-y-1">
+                <span className="font-semibold text-slate-300 block flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-amber-400" />
+                  Active Season Details:
+                </span>
+                <p className="text-slate-400 leading-relaxed text-[11px] sm:text-xs">
+                  {activeSpecies.active_season_details || activeSpecies.active_seasons.join(', ')}
+                </p>
+              </div>
             </div>
+
+            {/* Conservation & Legal Protection */}
+            {(activeSpecies.conservation_status || activeSpecies.legal_protection_status) && (
+              <div className="p-3.5 rounded-xl bg-[#141424] border border-slate-800 space-y-2 text-xs">
+                {activeSpecies.conservation_status && (
+                  <div className="flex items-start gap-2">
+                    <Shield className="w-3.5 h-3.5 text-purple-400 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-semibold text-slate-300">Conservation Status: </span>
+                      <span className="text-slate-400 text-[11px] sm:text-xs">{activeSpecies.conservation_status}</span>
+                    </div>
+                  </div>
+                )}
+                {activeSpecies.legal_protection_status && (
+                  <div className="flex items-start gap-2">
+                    <ShieldCheck className="w-3.5 h-3.5 text-[#2e86ff] shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-semibold text-slate-300">Legal Protection &amp; Regulation: </span>
+                      <span className="text-slate-400 text-[11px] sm:text-xs">{activeSpecies.legal_protection_status}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* First Aid & Emergency Guidance */}
             <div className="p-4 rounded-xl sm:rounded-2xl bg-rose-950/40 border border-rose-900/60 space-y-3 text-xs">

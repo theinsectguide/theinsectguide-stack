@@ -36,13 +36,14 @@ function loadLocalStore() {
             if (data.journal_entries) Object.entries(data.journal_entries).forEach(([k, v]) => memoryStore.journal_entries.set(k, v as JournalEntryDoc));
             if (data.alerts) Object.entries(data.alerts).forEach(([k, v]) => memoryStore.alerts.set(k, v as AlertDoc));
             if (data.transactions) Object.entries(data.transactions).forEach(([k, v]) => memoryStore.transactions.set(k, v as TransactionDoc));
+            console.log(`[Database Persistence] Protected and loaded ${memoryStore.users.size} users, ${memoryStore.scans.size} scans, ${memoryStore.journal_entries.size} journals from ${filePath}.`);
+            return; // Stop after loading the primary/first valid store file so deleted records are not resurrected!
           }
         } catch (e) {
           console.warn(`[Database Persistence] Warning reading ${filePath}:`, e);
         }
       }
     }
-    console.log(`[Database Persistence] Protected and loaded ${memoryStore.users.size} users, ${memoryStore.scans.size} scans, ${memoryStore.journal_entries.size} journals from durable disk storage.`);
   } catch (err) {
     console.error('[Database Persistence] Error loading store cache from disk:', err);
   }

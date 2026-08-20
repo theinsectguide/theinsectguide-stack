@@ -57,8 +57,12 @@ export const JournalPage: React.FC<{ onNavigate: (tab: string) => void; onGoBack
       return;
     }
     try {
-      const res = await fetch('/api/journal', {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetch(`/api/journal?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Cache-Control': 'no-cache',
+        },
       });
       if (res.ok) {
         const data = await res.json();

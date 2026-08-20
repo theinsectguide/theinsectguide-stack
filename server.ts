@@ -481,6 +481,7 @@ app.post('/api/scans/analyze-pest', requirePro, async (req: AuthRequest, res: Re
 
 app.get('/api/scans', requirePro, async (req: AuthRequest, res: Response) => {
   try {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     const user = req.user!;
     const scans = await getScansByUserId(user._id);
     return res.json({ scans });
@@ -545,6 +546,7 @@ app.post('/api/scans/:id/save-to-journal', requirePro, async (req: AuthRequest, 
 // ----------------------------------------------------
 app.get('/api/journal', requirePro, async (req: AuthRequest, res: Response) => {
   try {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     const entries = await getJournalEntriesByUserId(req.user!._id);
     const enriched = await Promise.all(
       entries.map(async (entry) => {
