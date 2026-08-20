@@ -1,6 +1,14 @@
 import { Request, Response } from 'express';
 import { AuthRequest } from './auth';
-import { updateUser, findUserById, createTransaction } from './db';
+import {
+  updateUser,
+  findUserById,
+  createTransaction,
+  updateTransaction,
+  findTransactionByCaptureId,
+  findTransactionByRefundId,
+  findFirstCompletedTransactionForUser,
+} from './db';
 import {
   sendPaymentConfirmedEmail,
   sendCancellationEmail,
@@ -312,47 +320,167 @@ export async function handleCancelSubscription(req: AuthRequest, res: Response) 
 export async function handleRequestRefund(req: AuthRequest, res: Response) {
   try {
     const user = req.user!;
-    if (!user.last_payment_date || user.subscription_status === 'refunded') {
-      return res.status(400).json({ error: 'No eligible payment found for refund or already refunded.' });
-    }
 
-    if (user.refund_requested) {
-      return res.status(400).json({ error: 'A refund has already been processed for this transaction.' });
-    }
-
-    // Verify 48 hours guarantee window
-    const paymentTime = new Date(user.last_payment_date).getTime();
-    const now = Date.now();
-    const hoursElapsed = (now - paymentTime) / (1000 * 60 * 60);
-
-    if (hoursElapsed > 48) {
+    // 1. Identify the user's FIRST completed payment transaction
+    const targetTx = await findFirstCompletedTransactionForUser(user._id);
+    if (!targetTx) {
       return res.status(400).json({
-        error: 'The 48-hour money-back guarantee window has expired for this payment.',
+        error: 'No completed transaction eligible for the 48-hour satisfaction guarantee refund was found on this account.',
       });
     }
 
-    // Revoke Pro access immediately and mark refunded
+    // 2. Double-refund prevention & Idempotency check on the target transaction
+    if (
+      targetTx.status === 'REFUNDED' ||
+      targetTx.refund_id ||
+      targetTx.refund_status === 'refund_succeeded' ||
+      targetTx.refund_status === 'refund_pending' ||
+      user.refund_requested ||
+      user.subscription_status === 'refunded'
+    ) {
+      return res.status(400).json({
+        error: 'A refund has already been processed or is currently pending for this transaction.',
+        refund_id: targetTx.refund_id,
+        refund_status: targetTx.refund_status,
+      });
+    }
+
+    // 3. Verify strict 48-hour guarantee window from the transaction's creation time
+    const txTime = new Date(targetTx.created_at).getTime();
+    const now = Date.now();
+    const hoursElapsed = (now - txTime) / (1000 * 60 * 60);
+
+    if (hoursElapsed > 48) {
+      return res.status(400).json({
+        error: 'The 48-hour money-back guarantee window has expired for this initial payment.',
+        payment_date: targetTx.created_at,
+        hours_elapsed: Math.round(hoursElapsed * 10) / 10,
+      });
+    }
+
+    // 4. Validate PayPal Capture ID
+    const captureId = targetTx.capture_id;
+    if (!captureId || captureId === 'FAILED' || captureId.startsWith('ORDER_')) {
+      return res.status(400).json({
+        error: 'No valid PayPal Capture ID found for this payment record. Please contact support.',
+      });
+    }
+
+    // 5. Set in-flight status on transaction to prevent concurrent race conditions
+    await updateTransaction(targetTx._id, {
+      refund_status: 'refund_requested',
+      refund_requested_at: new Date().toISOString(),
+    });
+
+    // 6. Obtain PayPal OAuth2 token
+    const token = await getPayPalAccessToken();
+    if (!token) {
+      await updateTransaction(targetTx._id, {
+        refund_status: 'refund_failed',
+        refund_error: 'Unable to authenticate with PayPal OAuth service.',
+      });
+      return res.status(500).json({
+        error: 'Unable to connect to PayPal authentication services. Please retry shortly.',
+      });
+    }
+
+    // 7. Execute REAL PayPal Refund REST API call: POST /v2/payments/captures/{capture_id}/refund
+    const idempotencyKey = `refund_${targetTx._id}_${targetTx.capture_id}`;
+    const refundPayload = {
+      amount: {
+        value: targetTx.amount,
+        currency_code: targetTx.currency || 'USD',
+      },
+      note_to_payer: 'The Insect Guide — 48-Hour Money-Back Guarantee Refund',
+    };
+
+    console.log(`[PayPal Refund API] Executing real refund for Capture ${captureId} ($${targetTx.amount} ${targetTx.currency || 'USD'})...`);
+
+    const response = await fetch(`${PAYPAL_API_BASE}/v2/payments/captures/${captureId}/refund`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'PayPal-Request-Id': idempotencyKey,
+      },
+      body: JSON.stringify(refundPayload),
+    });
+
+    const refundData: any = await response.json().catch(() => ({}));
+    const isSuccess = response.ok && (refundData?.status === 'COMPLETED' || refundData?.status === 'PENDING');
+    const refundId = refundData?.id;
+
+    // 8. Handle PayPal Error / Rejection
+    if (!isSuccess || !refundId) {
+      const errorMsg =
+        refundData?.message ||
+        refundData?.details?.[0]?.description ||
+        refundData?.name ||
+        `PayPal refund request rejected (HTTP ${response.status})`;
+
+      console.error(`[PayPal Refund Error] Capture ${captureId} refund rejected by PayPal:`, refundData);
+
+      // Record failure without downgrading or deleting the user account
+      await updateTransaction(targetTx._id, {
+        refund_status: 'refund_failed',
+        refund_error: errorMsg,
+        refund_raw_response: refundData,
+      });
+
+      return res.status(400).json({
+        error: `PayPal refund rejected: ${errorMsg}`,
+        refund_status: 'refund_failed',
+        details: refundData,
+      });
+    }
+
+    // 9. REAL REFUND CONFIRMED BY PAYPAL -> Update database transaction
+    const refundStatus = refundData.status === 'COMPLETED' ? 'refund_succeeded' : 'refund_pending';
+    const refundedAmountVal = refundData.amount?.value || targetTx.amount;
+
+    await updateTransaction(targetTx._id, {
+      status: 'REFUNDED',
+      refund_id: refundId,
+      refund_status: refundStatus,
+      refunded_amount: refundedAmountVal,
+      refund_created_at: refundData.create_time || new Date().toISOString(),
+      refund_raw_response: refundData,
+    });
+
+    // 10. Downgrade user account access ONLY after PayPal confirmation
     const updated = await updateUser(user._id, {
       tier: 'free',
       subscription_status: 'refunded',
       refund_requested: true,
     });
 
-    await sendRefundEmail(user);
+    // 11. Dispatch Brevo confirmation email ONLY after PayPal confirmed the refund
+    await sendRefundEmail(user, refundId, refundedAmountVal).catch(err =>
+      console.warn('[Brevo Warning] Failed to send refund confirmation email:', err)
+    );
     if (updated) {
-      addOrUpdateBrevoContact(updated).catch(err => console.warn('Brevo refund contact update warning:', err));
+      addOrUpdateBrevoContact(updated).catch(err =>
+        console.warn('[Brevo Warning] Failed to update Brevo contact attributes:', err)
+      );
     }
 
-    return res.json({
+    console.log(`[PayPal Refund Success] Successfully refunded capture ${captureId}. Refund ID: ${refundId}, Status: ${refundStatus}`);
+
+    return res.status(200).json({
       success: true,
-      message: 'Your 48-hour guarantee refund has been approved and processed to your PayPal account.',
+      refund_id: refundId,
+      refund_status: refundStatus,
+      amount_refunded: refundedAmountVal,
+      currency: refundData.amount?.currency_code || targetTx.currency || 'USD',
+      message: `Your 48-hour guarantee refund of $${refundedAmountVal} has been processed with PayPal (Refund ID: ${refundId}).`,
       user: {
         tier: updated?.tier,
         subscription_status: updated?.subscription_status,
       },
     });
-  } catch (err) {
-    return res.status(500).json({ error: 'Failed to process refund request.' });
+  } catch (err: any) {
+    console.error('[PayPal API Exception] Error during refund processing:', err);
+    return res.status(500).json({ error: 'Failed to process refund request due to internal error.' });
   }
 }
 
@@ -427,7 +555,7 @@ export async function handlePayPalWebhook(req: any, res: Response) {
 
     console.log(`[PayPal Live Webhook Received & Verified] ${eventType} (Webhook ID: ${PAYPAL_WEBHOOK_ID})`);
 
-    // Verify or inspect event payload
+    // Handle Subscription events
     if (eventType === 'BILLING.SUBSCRIPTION.ACTIVATED') {
       const subId = resource?.id;
       const customId = resource?.custom_id;
@@ -443,6 +571,36 @@ export async function handlePayPalWebhook(req: any, res: Response) {
       console.log(`Subscription cancelled in PayPal Live: ${subId}`);
     } else if (eventType === 'BILLING.SUBSCRIPTION.PAYMENT.FAILED') {
       console.warn(`PayPal subscription payment failed for resource: ${resource?.id}`);
+    } 
+    // Handle Capture Refund events
+    else if (eventType === 'PAYMENT.CAPTURE.REFUNDED' || eventType === 'PAYMENT.CAPTURE.REVERSED') {
+      const captureId = resource?.capture_id || resource?.links?.find((l: any) => l.rel === 'up')?.href?.split('/').pop();
+      const refundId = resource?.id;
+      console.log(`[PayPal Webhook] Payment capture refund event. Refund ID: ${refundId}, Capture ID: ${captureId}`);
+
+      if (captureId || refundId) {
+        let tx = null;
+        if (refundId) tx = await findTransactionByRefundId(refundId);
+        if (!tx && captureId) tx = await findTransactionByCaptureId(captureId);
+
+        if (tx) {
+          await updateTransaction(tx._id, {
+            status: 'REFUNDED',
+            refund_id: refundId || tx.refund_id,
+            refund_status: 'refund_succeeded',
+            refund_created_at: resource?.create_time || new Date().toISOString(),
+            refund_raw_response: resource,
+          });
+
+          if (tx.user_id) {
+            await updateUser(tx.user_id, {
+              tier: 'free',
+              subscription_status: 'refunded',
+              refund_requested: true,
+            });
+          }
+        }
+      }
     }
 
     return res.status(200).json({ received: true, mode: PAYPAL_MODE });

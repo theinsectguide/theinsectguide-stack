@@ -175,4 +175,11 @@ export interface TransactionDoc {
   status: 'COMPLETED' | 'PENDING' | 'FAILED' | 'REFUNDED';
   created_at: string;
   raw_details?: any;
+  refund_id?: string;
+  refund_status?: 'refund_requested' | 'refund_pending' | 'refund_succeeded' | 'refund_failed';
+  refunded_amount?: string;
+  refund_requested_at?: string;
+  refund_created_at?: string;
+  refund_error?: string;
+  refund_raw_response?: any;
 }

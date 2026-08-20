@@ -35,10 +35,27 @@ export const SettingsPage: React.FC<{ onNavigate: (tab: string) => void; onGoBac
   const [refunding, setRefunding] = useState(false);
   const [billingMessage, setBillingMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showInstallModal, setShowInstallModal] = useState(false);
+  const [userTransactions, setUserTransactions] = useState<any[]>([]);
+
+  const fetchTransactions = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/subscription/transactions', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUserTransactions(data.transactions || []);
+      }
+    } catch {
+      // ignore fetch error
+    }
+  };
 
   useEffect(() => {
     refreshUser();
-  }, []);
+    fetchTransactions();
+  }, [token]);
 
   // 48h Countdown Timer Calculation
   const [timeLeft48h, setTimeLeft48h] = useState<{
@@ -142,8 +159,10 @@ export const SettingsPage: React.FC<{ onNavigate: (tab: string) => void; onGoBac
       if (res.ok) {
         setBillingMessage({ type: 'success', text: data.message || 'Refund successfully processed.' });
         await refreshUser();
+        await fetchTransactions();
       } else {
         setBillingMessage({ type: 'error', text: data.error || 'Refund request rejected.' });
+        await fetchTransactions();
       }
     } catch (err: any) {
       setBillingMessage({ type: 'error', text: err.message || 'Connection error.' });
@@ -258,7 +277,59 @@ export const SettingsPage: React.FC<{ onNavigate: (tab: string) => void; onGoBac
             <span>Transaction History &amp; Receipts</span>
           </h4>
 
-          {user?.last_payment_date ? (
+          {userTransactions.length > 0 ? (
+            <div className="rounded-xl bg-[#141424] border border-slate-700/80 overflow-hidden">
+              <table className="w-full text-left text-xs text-slate-200">
+                <thead className="bg-[#10101c] text-[11px] text-slate-400 font-semibold border-b border-slate-800">
+                  <tr>
+                    <th className="p-3">Payment Date</th>
+                    <th className="p-3">Plan / Description</th>
+                    <th className="p-3">Amount</th>
+                    <th className="p-3">PayPal Details</th>
+                    <th className="p-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {userTransactions.map((tx: any) => (
+                    <tr key={tx._id}>
+                      <td className="p-3 font-mono text-slate-300">
+                        {new Date(tx.created_at).toLocaleDateString()} {new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                      <td className="p-3 font-medium text-white">
+                        The Insect Guide Pro ({tx.plan === 'annual' ? 'Annual Pass' : 'Monthly Access'})
+                      </td>
+                      <td className="p-3 font-bold text-emerald-400">
+                        ${tx.amount} {tx.currency || 'USD'}
+                      </td>
+                      <td className="p-3 font-mono text-[11px] text-slate-400 space-y-0.5">
+                        {tx.capture_id && <div>Capture: <span className="text-slate-300">{tx.capture_id}</span></div>}
+                        {tx.refund_id && <div>Refund ID: <span className="text-rose-300 font-bold">{tx.refund_id}</span></div>}
+                      </td>
+                      <td className="p-3">
+                        {tx.status === 'REFUNDED' || tx.refund_status === 'refund_succeeded' ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                            Refunded (${tx.refunded_amount || tx.amount})
+                          </span>
+                        ) : tx.refund_status === 'refund_pending' ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                            Refund Pending
+                          </span>
+                        ) : tx.refund_status === 'refund_failed' ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                            Refund Failed
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                            Completed &amp; Active
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : user?.last_payment_date ? (
             <div className="rounded-xl bg-[#141424] border border-slate-700/80 overflow-hidden">
               <table className="w-full text-left text-xs text-slate-200">
                 <thead className="bg-[#10101c] text-[11px] text-slate-400 font-semibold border-b border-slate-800">

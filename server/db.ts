@@ -488,3 +488,65 @@ export async function getAllTransactions(): Promise<TransactionDoc[]> {
   return Array.from(memoryStore.transactions.values())
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
+
+export async function updateTransaction(id: string, updates: Partial<TransactionDoc>): Promise<TransactionDoc | null> {
+  if (isConnectedToMongo && mongoDb) {
+    try {
+      await mongoDb.collection('transactions').updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updates }
+      );
+    } catch {
+      await mongoDb.collection('transactions').updateOne(
+        { _id: id as any },
+        { $set: updates }
+      );
+    }
+  }
+
+  const existing = memoryStore.transactions.get(id);
+  if (existing) {
+    const updated = { ...existing, ...updates };
+    memoryStore.transactions.set(id, updated);
+    saveLocalStore();
+    return updated;
+  }
+  return null;
+}
+
+export async function findTransactionByCaptureId(captureId: string): Promise<TransactionDoc | null> {
+  if (!captureId) return null;
+  if (isConnectedToMongo && mongoDb) {
+    const tx = await mongoDb.collection('transactions').findOne({ capture_id: captureId });
+    if (tx) return { ...tx, _id: tx._id.toString() } as unknown as TransactionDoc;
+    return null;
+  }
+  for (const tx of memoryStore.transactions.values()) {
+    if (tx.capture_id === captureId) return tx;
+  }
+  return null;
+}
+
+export async function findTransactionByRefundId(refundId: string): Promise<TransactionDoc | null> {
+  if (!refundId) return null;
+  if (isConnectedToMongo && mongoDb) {
+    const tx = await mongoDb.collection('transactions').findOne({ refund_id: refundId });
+    if (tx) return { ...tx, _id: tx._id.toString() } as unknown as TransactionDoc;
+    return null;
+  }
+  for (const tx of memoryStore.transactions.values()) {
+    if (tx.refund_id === refundId) return tx;
+  }
+  return null;
+}
+
+export async function findFirstCompletedTransactionForUser(userId: string): Promise<TransactionDoc | null> {
+  if (!userId) return null;
+  const userTxs = await getTransactionsByUserId(userId);
+  const completedTxs = userTxs
+    .filter(t => t.status === 'COMPLETED' || t.status === 'REFUNDED')
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()); // oldest first
+
+  return completedTxs[0] || null;
+}
+

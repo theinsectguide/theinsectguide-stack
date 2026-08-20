@@ -312,19 +312,24 @@ export async function sendCancellationEmail(user: UserDoc) {
 /**
  * 4. Email de confirmation de remboursement 48h
  */
-export async function sendRefundEmail(user: UserDoc) {
+export async function sendRefundEmail(user: UserDoc, refundId?: string, refundAmount?: string) {
   const subject = 'Refund Processed — The Insect Guide 48-Hour Guarantee';
+  const amountDisplay = refundAmount ? (refundAmount.startsWith('$') ? refundAmount : `$${refundAmount}`) : '';
   const content = `
     <h1 style="color: #ffffff; font-size: 22px; font-weight: 800; margin: 0 0 16px 0;">
       48-Hour Guarantee: Refund Confirmed
     </h1>
     <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1; margin: 0 0 20px 0;">
-      Your refund under our <strong>48-hour no-questions-asked satisfaction guarantee</strong> has been processed successfully.
+      Your refund request under our <strong>48-hour satisfaction guarantee</strong> has been transmitted and confirmed with PayPal.
     </p>
 
     <div style="background-color: #242442; border: 1px solid #3b3b66; border-left: 4px solid #10b981; border-radius: 12px; padding: 18px; margin: 24px 0;">
-      <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #e2e8f0;">
-        The refunded amount is returning to your original PayPal account. Depending on your financial provider, this will appear in your statement within 3 to 5 business days.
+      <p style="margin: 0 0 8px 0; font-size: 14px; line-height: 1.6; color: #e2e8f0;">
+        ${amountDisplay ? `The refunded amount of <strong>${amountDisplay}</strong>` : 'The full payment amount'} is returning to your original payment method (PayPal or Credit/Debit card).
+      </p>
+      ${refundId ? `<p style="margin: 0; font-size: 13px; color: #94a3b8; font-family: monospace;">PayPal Refund Reference: <strong>${refundId}</strong></p>` : ''}
+      <p style="margin: 8px 0 0 0; font-size: 12.5px; color: #64748b;">
+        Depending on your bank or payment issuer, this refund will appear on your statement within 3 to 5 business days.
       </p>
     </div>
 

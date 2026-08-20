@@ -776,6 +776,14 @@ app.post('/api/paypal/create-order', requireAuth, handleCreatePayPalOrder);
 app.post('/api/paypal/capture-order', requireAuth, handleCapturePayPalOrder);
 app.post('/api/subscription/cancel', requireAuth, handleCancelSubscription);
 app.post('/api/subscription/refund', requireAuth, handleRequestRefund);
+app.get('/api/subscription/transactions', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const transactions = await getTransactionsByUserId(req.user!._id);
+    return res.json({ transactions });
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to retrieve transactions.' });
+  }
+});
 app.post('/api/webhooks/paypal', handlePayPalWebhook);
 
 // ----------------------------------------------------
