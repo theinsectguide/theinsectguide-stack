@@ -66,7 +66,7 @@ export const MonthlyCheckoutModal: React.FC<MonthlyCheckoutModalProps> = ({
             <button
               onClick={onClose}
               className="absolute top-5 right-5 p-2 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-all cursor-pointer"
-              aria-label="Fermer"
+              aria-label="Close"
             >
               <X className="w-5 h-5" />
             </button>
@@ -75,14 +75,14 @@ export const MonthlyCheckoutModal: React.FC<MonthlyCheckoutModalProps> = ({
             <div className="space-y-2 pr-8">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold uppercase tracking-wider">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Abonnement Mensuel Pro</span>
+                <span>Monthly Pro Subscription</span>
               </div>
               <h2 className="text-xl sm:text-2xl font-display font-black text-white">
-                Finaliser votre formule Mensuelle
+                Complete your Monthly Plan
               </h2>
               <div className="flex items-baseline gap-2 pt-1">
                 <span className="text-3xl font-display font-black text-emerald-400">$4.99</span>
-                <span className="text-xs text-slate-400 font-medium">USD / mois • Sans engagement</span>
+                <span className="text-xs text-slate-400 font-medium">USD / month • No commitment</span>
               </div>
             </div>
 
@@ -91,10 +91,10 @@ export const MonthlyCheckoutModal: React.FC<MonthlyCheckoutModalProps> = ({
               <div className="space-y-4 p-4 rounded-2xl bg-slate-900/60 border border-slate-700">
                 <div className="flex items-center gap-2 text-xs text-amber-300 font-semibold">
                   <Lock className="w-4 h-4" />
-                  <span>Connexion requise pour lier votre abonnement</span>
+                  <span>Sign in required to link your subscription</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Veuillez créer un compte ou vous connecter avant de souscrire à l'abonnement mensuel.
+                  Please create an account or sign in before subscribing to the monthly plan.
                 </p>
                 <div className="flex items-center gap-3">
                   <a
@@ -102,14 +102,14 @@ export const MonthlyCheckoutModal: React.FC<MonthlyCheckoutModalProps> = ({
                     onClick={onClose}
                     className="flex-1 py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs text-center transition-all shadow-md cursor-pointer"
                   >
-                    Créer un compte
+                    Create an account
                   </a>
                   <a
                     href="#login"
                     onClick={onClose}
                     className="flex-1 py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs text-center transition-all cursor-pointer"
                   >
-                    Se connecter
+                    Sign In
                   </a>
                 </div>
               </div>
@@ -132,7 +132,7 @@ export const MonthlyCheckoutModal: React.FC<MonthlyCheckoutModalProps> = ({
                 {loading && (
                   <div className="flex items-center justify-center gap-2 py-2 text-xs text-emerald-400">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Validation et activation de votre abonnement récurrent...</span>
+                    <span>Validating and activating your recurring subscription...</span>
                   </div>
                 )}
 
@@ -165,7 +165,7 @@ export const MonthlyCheckoutModal: React.FC<MonthlyCheckoutModalProps> = ({
                           });
                         } catch (err: any) {
                           setLoading(false);
-                          setErrorMsg(err.message || "Erreur lors de l'initialisation de l'abonnement.");
+                          setErrorMsg(err.message || "Error during subscription initialization.");
                           throw err;
                         }
                       }}
@@ -191,7 +191,7 @@ export const MonthlyCheckoutModal: React.FC<MonthlyCheckoutModalProps> = ({
 
                           if (!res.ok || !verifyResult.success || verifyResult.status !== 'ACTIVE') {
                             throw new Error(
-                              verifyResult.error || "L'abonnement récurrent n'a pas pu être validé."
+                              verifyResult.error || "The recurring subscription could not be validated."
                             );
                           }
 
@@ -199,19 +199,19 @@ export const MonthlyCheckoutModal: React.FC<MonthlyCheckoutModalProps> = ({
                           setCompleted(true);
                         } catch (err: any) {
                           console.error('[Monthly Subscription Approval Error]', err);
-                          setErrorMsg(err.message || "Échec de la confirmation de l'abonnement.");
+                          setErrorMsg(err.message || "Failed to confirm subscription.");
                         } finally {
                           setLoading(false);
                         }
                       }}
                       onCancel={() => {
                         setLoading(false);
-                        setCancelMsg('Souscription annulée.');
+                        setCancelMsg('Subscription cancelled.');
                       }}
                       onError={(err) => {
                         setLoading(false);
                         console.error('[Monthly Subscription SDK Error]', err);
-                        setErrorMsg("Une erreur est survenue lors de l'accès au service de paiement.");
+                        setErrorMsg("An error occurred while connecting to PayPal payment service.");
                       }}
                     />
                   </div>
@@ -223,11 +223,11 @@ export const MonthlyCheckoutModal: React.FC<MonthlyCheckoutModalProps> = ({
             <div className="p-3.5 rounded-2xl bg-[#1c1c38] border border-slate-700/60 space-y-2 text-xs text-slate-300">
               <div className="flex items-center gap-2 text-emerald-400 font-semibold">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>Plan officiel : $4.99 USD / mois (Résiliation en 1 clic)</span>
+                <span>Official plan: $4.99 USD / month (cancel anytime)</span>
               </div>
               <div className="flex items-center gap-2 text-slate-400 text-[11px]">
                 <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Garantie satisfait ou remboursé 48h sur le 1er paiement</span>
+                <span>48-hour money-back guarantee on the first payment</span>
               </div>
             </div>
           </>

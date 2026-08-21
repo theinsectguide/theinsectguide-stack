@@ -64,7 +64,7 @@ export const AnnualCheckoutModal: React.FC<AnnualCheckoutModalProps> = ({
             <button
               onClick={onClose}
               className="absolute top-5 right-5 p-2 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-all cursor-pointer"
-              aria-label="Fermer"
+              aria-label="Close"
             >
               <X className="w-5 h-5" />
             </button>
@@ -73,14 +73,14 @@ export const AnnualCheckoutModal: React.FC<AnnualCheckoutModalProps> = ({
             <div className="space-y-2 pr-8">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold uppercase tracking-wider">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Pass Annuel Pro (Paiement Unique)</span>
+                <span>Annual Pass Pro (One-Time Payment)</span>
               </div>
               <h2 className="text-xl sm:text-2xl font-display font-black text-white">
-                Finaliser votre Pass Annuel 1 An
+                Complete your 1-Year Annual Pass
               </h2>
               <div className="flex items-baseline gap-2 pt-1">
                 <span className="text-3xl font-display font-black text-emerald-400">$29.99</span>
-                <span className="text-xs text-slate-400 font-medium">USD • Paiement unique (Sans prélèvement récurrent)</span>
+                <span className="text-xs text-slate-400 font-medium">USD • One-time payment (No recurring charges)</span>
               </div>
             </div>
 
@@ -89,10 +89,10 @@ export const AnnualCheckoutModal: React.FC<AnnualCheckoutModalProps> = ({
               <div className="space-y-4 p-4 rounded-2xl bg-slate-900/60 border border-slate-700">
                 <div className="flex items-center gap-2 text-xs text-amber-300 font-semibold">
                   <Lock className="w-4 h-4" />
-                  <span>Connexion requise pour activer votre pass</span>
+                  <span>Sign in required to activate your pass</span>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Veuillez créer un compte ou vous connecter avant de procéder au règlement.
+                  Please create an account or sign in before proceeding to checkout.
                 </p>
                 <div className="flex items-center gap-3">
                   <a
@@ -100,14 +100,14 @@ export const AnnualCheckoutModal: React.FC<AnnualCheckoutModalProps> = ({
                     onClick={onClose}
                     className="flex-1 py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs text-center transition-all shadow-md cursor-pointer"
                   >
-                    Créer un compte
+                    Create an account
                   </a>
                   <a
                     href="#login"
                     onClick={onClose}
                     className="flex-1 py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs text-center transition-all cursor-pointer"
                   >
-                    Se connecter
+                    Sign In
                   </a>
                 </div>
               </div>
@@ -130,7 +130,7 @@ export const AnnualCheckoutModal: React.FC<AnnualCheckoutModalProps> = ({
                 {loading && (
                   <div className="flex items-center justify-center gap-2 py-2 text-xs text-emerald-400">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Vérification et capture sécurisée de votre commande...</span>
+                    <span>Verifying and capturing your order securely...</span>
                   </div>
                 )}
 
@@ -162,14 +162,14 @@ export const AnnualCheckoutModal: React.FC<AnnualCheckoutModalProps> = ({
 
                           const data = await res.json();
                           if (!res.ok || !data.orderID) {
-                            throw new Error(data.error || 'Impossible de créer la commande PayPal.');
+                            throw new Error(data.error || 'Unable to create PayPal order.');
                           }
 
                           setLoading(false);
                           return data.orderID;
                         } catch (err: any) {
                           setLoading(false);
-                          setErrorMsg(err.message || 'Erreur lors de la commande.');
+                          setErrorMsg(err.message || 'Error creating order.');
                           throw err;
                         }
                       }}
@@ -194,7 +194,7 @@ export const AnnualCheckoutModal: React.FC<AnnualCheckoutModalProps> = ({
 
                           if (!res.ok || !captureResult.success || captureResult.status !== 'COMPLETED') {
                             throw new Error(
-                              captureResult.error || 'Le paiement unique n\'a pas pu être validé.'
+                              captureResult.error || 'The one-time payment could not be validated.'
                             );
                           }
 
@@ -202,19 +202,19 @@ export const AnnualCheckoutModal: React.FC<AnnualCheckoutModalProps> = ({
                           setCompleted(true);
                         } catch (err: any) {
                           console.error('[Annual Pass Capture Approval Error]', err);
-                          setErrorMsg(err.message || 'Échec de la capture du paiement.');
+                          setErrorMsg(err.message || 'Failed to capture payment.');
                         } finally {
                           setLoading(false);
                         }
                       }}
                       onCancel={() => {
                         setLoading(false);
-                        setCancelMsg('Transaction annulée.');
+                        setCancelMsg('Transaction cancelled.');
                       }}
                       onError={(err) => {
                         setLoading(false);
                         console.error('[Annual Order SDK Error]', err);
-                        setErrorMsg("Une erreur est survenue lors de l'accès au service de paiement.");
+                        setErrorMsg("An error occurred while connecting to PayPal payment service.");
                       }}
                     />
                   </div>
@@ -226,11 +226,11 @@ export const AnnualCheckoutModal: React.FC<AnnualCheckoutModalProps> = ({
             <div className="p-3.5 rounded-2xl bg-[#1c1c38] border border-slate-700/60 space-y-2 text-xs text-slate-300">
               <div className="flex items-center gap-2 text-emerald-400 font-semibold">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>Pass 12 Mois : $29.99 USD (Accès garanti 1 an sans abonnement)</span>
+                <span>12-Month Pass: $29.99 USD (Guaranteed 1-year access without recurring charges)</span>
               </div>
               <div className="flex items-center gap-2 text-slate-400 text-[11px]">
                 <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Garantie satisfait ou remboursé 48h active</span>
+                <span>48-hour money-back guarantee active</span>
               </div>
             </div>
           </>

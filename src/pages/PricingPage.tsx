@@ -160,7 +160,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
                   className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98 cursor-pointer"
                 >
                   <LayoutDashboard className="w-4 h-4" />
-                  <span>Accéder à mon Dashboard</span>
+                  <span>Access my Dashboard</span>
                 </button>
               </div>
             ) : (
@@ -170,12 +170,12 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
                 className="w-full py-3.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-display font-black text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20 active:scale-98 cursor-pointer"
               >
                 <CreditCard className="w-4 h-4" />
-                <span>Souscrire au Mensuel ($4.99/mo)</span>
+                <span>Subscribe Monthly ($4.99/mo)</span>
               </button>
             )}
             <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Paiement sécurisé PayPal • Carte bancaire</span>
+              <span>Secure payment via PayPal • Credit card</span>
             </div>
           </div>
         </div>
@@ -244,7 +244,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
                   className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98 cursor-pointer"
                 >
                   <LayoutDashboard className="w-4 h-4" />
-                  <span>Accéder à mon Dashboard</span>
+                  <span>Access my Dashboard</span>
                 </button>
               </div>
             ) : (
@@ -254,12 +254,12 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
                 className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-[#10b981] hover:brightness-110 text-slate-950 font-display font-black text-sm flex items-center justify-center gap-2 transition-all shadow-xl shadow-emerald-500/25 active:scale-98 cursor-pointer"
               >
                 <CreditCard className="w-4 h-4" />
-                <span>Prendre le Pass Annuel ($29.99/an)</span>
+                <span>Get the Annual Pass ($29.99/year)</span>
               </button>
             )}
             <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Garantie satisfait ou remboursé 48h active</span>
+              <span>48-hour money-back guarantee active</span>
             </div>
           </div>
         </div>
