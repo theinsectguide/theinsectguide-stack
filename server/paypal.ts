@@ -735,8 +735,9 @@ export async function handleCancelSubscription(req: AuthRequest, res: Response) 
 
 /**
  * 48-HOUR MONEY-BACK GUARANTEE REFUND
- * Uses real PayPal Capture ID of the 1st payment transaction, executes real refund,
- * and automatically cancels the recurring subscription on PayPal.
+ * Handles Monthly Subscriptions via PayPal Sale Refund API (/v1/payments/sale/{sale_id}/refund)
+ * and Annual Pass via PayPal Capture Refund API (/v2/payments/captures/{capture_id}/refund).
+ * Automatically cancels recurring subscriptions and downgrades account upon confirmed success.
  */
 export async function handleRequestRefund(req: AuthRequest, res: Response) {
   try {
@@ -791,83 +792,179 @@ export async function handleRequestRefund(req: AuthRequest, res: Response) {
       });
     }
 
-    // 5. Validate and resolve PayPal Capture ID
-    let captureId = targetTx.capture_id;
+    // 5. Determine whether this is a Monthly Subscription (Sale) or Annual Pass (Capture)
+    const isMonthlySubscription =
+      targetTx.plan === 'monthly' ||
+      !!targetTx.subscription_id ||
+      !!user.paypal_subscription_id ||
+      user.subscription_type === 'recurring_subscription' ||
+      user.subscription_plan === 'monthly';
 
-    // If captureId is a subscription ID (starts with I-) or missing, resolve from PayPal Subscription Transactions API
-    const subId = targetTx.subscription_id || user.paypal_subscription_id || (captureId?.startsWith('I-') ? captureId : null);
-    if ((!captureId || captureId.startsWith('I-') || captureId.startsWith('ORDER_')) && subId) {
-      try {
-        const txTimeIso = new Date(targetTx.created_at);
-        const startTime = new Date(txTimeIso.getTime() - 24 * 60 * 60 * 1000).toISOString();
-        const endTime = new Date(txTimeIso.getTime() + 48 * 60 * 60 * 1000).toISOString();
+    const subId = targetTx.subscription_id || user.paypal_subscription_id || user.subscription_id || null;
 
-        const txRes = await fetch(
-          `${PAYPAL_API_BASE}/v1/billing/subscriptions/${subId}/transactions?start_time=${startTime}&end_time=${endTime}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
+    let response: any;
+    let refundData: any;
+    let isSuccess = false;
+    let refundId: string | undefined;
+    let resourceIdentifier = '';
 
-        if (txRes.ok) {
-          const txData: any = await txRes.json();
-          if (Array.isArray(txData.transactions) && txData.transactions.length > 0) {
-            const completedTx = txData.transactions.find((t: any) => t.status === 'COMPLETED') || txData.transactions[0];
-            if (completedTx?.id) {
-              captureId = completedTx.id;
-              await updateTransaction(targetTx._id, { capture_id: captureId });
-              console.log(`[PayPal Refund] Resolved real Capture ID ${captureId} for subscription ${subId}`);
+    // =========================================================================
+    // FLUX A: ABONNEMENT MENSUEL ($4.99) — PAYPAL SALE REFUND
+    // =========================================================================
+    if (isMonthlySubscription) {
+      let saleId = targetTx.capture_id;
+
+      // If saleId is missing or is the Subscription ID (starts with I-), resolve from Subscription Transactions API
+      if ((!saleId || saleId.startsWith('I-') || saleId.startsWith('ORDER_')) && subId) {
+        try {
+          const txTimeIso = new Date(targetTx.created_at);
+          const startTime = new Date(txTimeIso.getTime() - 24 * 60 * 60 * 1000).toISOString();
+          const endTime = new Date(txTimeIso.getTime() + 48 * 60 * 60 * 1000).toISOString();
+
+          const txRes = await fetch(
+            `${PAYPAL_API_BASE}/v1/billing/subscriptions/${subId}/transactions?start_time=${startTime}&end_time=${endTime}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+
+          if (txRes.ok) {
+            const txData: any = await txRes.json();
+            if (Array.isArray(txData.transactions) && txData.transactions.length > 0) {
+              const completedTx = txData.transactions.find((t: any) => t.status === 'COMPLETED') || txData.transactions[0];
+              if (completedTx?.id) {
+                saleId = completedTx.id;
+                await updateTransaction(targetTx._id, { capture_id: saleId });
+                console.log(`[PayPal Refund] Resolved real Sale ID ${saleId} for subscription ${subId}`);
+              }
             }
           }
+        } catch (resErr) {
+          console.warn('[PayPal Refund] Could not resolve sale ID via subscription transactions:', resErr);
         }
-      } catch (resErr) {
-        console.warn('[PayPal Refund] Could not resolve capture ID via subscription transactions:', resErr);
       }
-    }
 
-    if (!captureId || captureId === 'FAILED' || captureId.startsWith('ORDER_')) {
-      return res.status(400).json({
-        error: 'No valid PayPal Capture ID found for this payment record. Please contact support.',
+      if (!saleId || saleId === 'FAILED' || saleId.startsWith('ORDER_') || saleId.startsWith('I-')) {
+        return res.status(400).json({
+          error: 'No valid PayPal Sale transaction ID found for this monthly subscription payment. Please contact support.',
+        });
+      }
+
+      resourceIdentifier = `Sale ${saleId}`;
+
+      // Retrieve HATEOAS "refund" link from Sale if available
+      let refundUrl = `${PAYPAL_API_BASE}/v1/payments/sale/${saleId}/refund`;
+      try {
+        const saleRes = await fetch(`${PAYPAL_API_BASE}/v1/payments/sale/${saleId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (saleRes.ok) {
+          const saleData: any = await saleRes.json();
+          const hateoasRefundLink = saleData.links?.find((l: any) => l.rel === 'refund')?.href;
+          if (hateoasRefundLink) {
+            refundUrl = hateoasRefundLink;
+            console.log(`[PayPal Refund] Using official HATEOAS refund link from Sale ${saleId}: ${refundUrl}`);
+          }
+        }
+      } catch (saleErr) {
+        console.warn(`[PayPal Refund] Could not fetch sale details directly, falling back to ${refundUrl}:`, saleErr);
+      }
+
+      // Set in-flight status on transaction
+      await updateTransaction(targetTx._id, {
+        refund_status: 'refund_requested',
+        refund_requested_at: new Date().toISOString(),
       });
-    }
 
-    // 6. Set in-flight status on transaction to prevent concurrent race conditions
-    await updateTransaction(targetTx._id, {
-      refund_status: 'refund_requested',
-      refund_requested_at: new Date().toISOString(),
-    });
-
-    // 7. Execute REAL PayPal Refund REST API call: POST /v2/payments/captures/{capture_id}/refund
-    const idempotencyKey = crypto.randomUUID();
-    const refundPayload: any = {
-      note_to_payer: 'The Insect Guide — 48-Hour Money-Back Guarantee Refund',
-    };
-
-    if (targetTx.amount && !isNaN(parseFloat(targetTx.amount))) {
-      refundPayload.amount = {
-        value: parseFloat(targetTx.amount).toFixed(2),
-        currency_code: targetTx.currency || 'USD',
+      // Prepare Sale Refund Payload according to PayPal v1 Payments specification
+      const saleRefundPayload: any = {
+        description: 'The Insect Guide — 48-Hour Money-Back Guarantee Refund',
       };
+      if (targetTx.amount && !isNaN(parseFloat(targetTx.amount))) {
+        saleRefundPayload.amount = {
+          total: parseFloat(targetTx.amount).toFixed(2),
+          currency: targetTx.currency || 'USD',
+        };
+      }
+
+      console.log(`[PayPal Refund API] Executing real refund for Monthly Sale ${saleId} ($${targetTx.amount} ${targetTx.currency || 'USD'}) via ${refundUrl}...`);
+
+      response = await fetch(refundUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(saleRefundPayload),
+      });
+
+      refundData = await response.json().catch(() => ({}));
+      isSuccess = response.ok && (
+        refundData?.state === 'completed' ||
+        refundData?.state === 'pending' ||
+        refundData?.status === 'COMPLETED' ||
+        refundData?.status === 'PENDING'
+      );
+      refundId = refundData?.id;
     }
+    // =========================================================================
+    // FLUX B: PASS ANNUEL ($29.99) — PAYPAL ORDERS V2 CAPTURE REFUND
+    // =========================================================================
+    else {
+      const captureId = targetTx.capture_id;
+      if (!captureId || captureId === 'FAILED' || captureId.startsWith('ORDER_') || captureId.startsWith('I-')) {
+        return res.status(400).json({
+          error: 'No valid PayPal Capture ID found for this annual order payment record. Please contact support.',
+        });
+      }
 
-    console.log(`[PayPal Refund API] Executing real refund for Capture ${captureId} ($${targetTx.amount} ${targetTx.currency || 'USD'})...`);
+      resourceIdentifier = `Capture ${captureId}`;
 
-    const response = await fetch(`${PAYPAL_API_BASE}/v2/payments/captures/${captureId}/refund`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'PayPal-Request-Id': idempotencyKey,
-      },
-      body: JSON.stringify(refundPayload),
-    });
+      // Set in-flight status on transaction
+      await updateTransaction(targetTx._id, {
+        refund_status: 'refund_requested',
+        refund_requested_at: new Date().toISOString(),
+      });
 
-    const refundData: any = await response.json().catch(() => ({}));
-    const isSuccess = response.ok && (refundData?.status === 'COMPLETED' || refundData?.status === 'PENDING');
-    const refundId = refundData?.id;
+      const idempotencyKey = crypto.randomUUID();
+      const captureRefundPayload: any = {
+        note_to_payer: 'The Insect Guide — 48-Hour Money-Back Guarantee Refund',
+      };
+
+      if (targetTx.amount && !isNaN(parseFloat(targetTx.amount))) {
+        captureRefundPayload.amount = {
+          value: parseFloat(targetTx.amount).toFixed(2),
+          currency_code: targetTx.currency || 'USD',
+        };
+      }
+
+      console.log(`[PayPal Refund API] Executing real refund for Annual Capture ${captureId} ($${targetTx.amount} ${targetTx.currency || 'USD'})...`);
+
+      response = await fetch(`${PAYPAL_API_BASE}/v2/payments/captures/${captureId}/refund`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'PayPal-Request-Id': idempotencyKey,
+        },
+        body: JSON.stringify(captureRefundPayload),
+      });
+
+      refundData = await response.json().catch(() => ({}));
+      isSuccess = response.ok && (
+        refundData?.status === 'COMPLETED' ||
+        refundData?.status === 'PENDING' ||
+        refundData?.state === 'completed' ||
+        refundData?.state === 'pending'
+      );
+      refundId = refundData?.id;
+    }
 
     // 8. Handle PayPal Error / Rejection
     if (!isSuccess || !refundId) {
@@ -893,14 +990,14 @@ export async function handleRequestRefund(req: AuthRequest, res: Response) {
       } else if (refundData?.name) {
         errorMsg = refundData.name;
       } else {
-        errorMsg = `PayPal refund rejected (HTTP ${response.status})`;
+        errorMsg = `PayPal refund rejected (HTTP ${response?.status || 500})`;
       }
 
       if (debugId) {
         errorMsg += ` (PayPal Debug ID: ${debugId})`;
       }
 
-      console.error(`[PayPal Refund Error] Capture ${captureId} refund rejected by PayPal:`, JSON.stringify(refundData, null, 2));
+      console.error(`[PayPal Refund Error] ${resourceIdentifier} refund rejected by PayPal:`, JSON.stringify(refundData, null, 2));
 
       // Record failure with exact diagnostic details without downgrading or deleting user account
       await updateTransaction(targetTx._id, {
@@ -920,8 +1017,8 @@ export async function handleRequestRefund(req: AuthRequest, res: Response) {
     }
 
     // 9. REAL REFUND CONFIRMED BY PAYPAL -> Update database transaction
-    const refundStatus = refundData.status === 'COMPLETED' ? 'refund_succeeded' : 'refund_pending';
-    const refundedAmountVal = refundData.amount?.value || targetTx.amount;
+    const refundStatus = (refundData.status === 'COMPLETED' || refundData.state === 'completed') ? 'refund_succeeded' : 'refund_pending';
+    const refundedAmountVal = refundData.amount?.total || refundData.amount?.value || targetTx.amount;
 
     await updateTransaction(targetTx._id, {
       status: 'REFUNDED',
@@ -963,14 +1060,14 @@ export async function handleRequestRefund(req: AuthRequest, res: Response) {
       );
     }
 
-    console.log(`[PayPal Refund Success] Successfully refunded capture ${captureId}. Refund ID: ${refundId}, Status: ${refundStatus}`);
+    console.log(`[PayPal Refund Success] Successfully refunded ${resourceIdentifier}. Refund ID: ${refundId}, Status: ${refundStatus}`);
 
     return res.status(200).json({
       success: true,
       refund_id: refundId,
       refund_status: refundStatus,
       amount_refunded: refundedAmountVal,
-      currency: refundData.amount?.currency_code || targetTx.currency || 'USD',
+      currency: refundData.amount?.currency || refundData.amount?.currency_code || targetTx.currency || 'USD',
       message: `Your 48-hour guarantee refund of $${refundedAmountVal} has been processed with PayPal (Refund ID: ${refundId}).`,
       user: {
         tier: updated?.tier,
@@ -1193,16 +1290,21 @@ export async function handlePayPalWebhook(req: any, res: Response) {
       }
     }
 
-    // EVENT: PAYMENT.CAPTURE.REFUNDED or REVERSED
-    else if (eventType === 'PAYMENT.CAPTURE.REFUNDED' || eventType === 'PAYMENT.CAPTURE.REVERSED') {
-      const captureId = resource?.capture_id || resource?.links?.find((l: any) => l.rel === 'up')?.href?.split('/').pop();
+    // EVENT: PAYMENT.CAPTURE.REFUNDED, PAYMENT.CAPTURE.REVERSED, PAYMENT.SALE.REFUNDED, or PAYMENT.SALE.REVERSED
+    else if (
+      eventType === 'PAYMENT.CAPTURE.REFUNDED' ||
+      eventType === 'PAYMENT.CAPTURE.REVERSED' ||
+      eventType === 'PAYMENT.SALE.REFUNDED' ||
+      eventType === 'PAYMENT.SALE.REVERSED'
+    ) {
+      const resourceId = resource?.capture_id || resource?.sale_id || resource?.parent_payment || resource?.links?.find((l: any) => l.rel === 'up')?.href?.split('/').pop();
       const refundId = resource?.id;
-      console.log(`[PayPal Webhook] Payment capture refund event. Refund ID: ${refundId}, Capture ID: ${captureId}`);
+      console.log(`[PayPal Webhook] Payment refund event (${eventType}). Refund ID: ${refundId}, Resource ID: ${resourceId}`);
 
-      if (captureId || refundId) {
+      if (resourceId || refundId) {
         let tx = null;
         if (refundId) tx = await findTransactionByRefundId(refundId);
-        if (!tx && captureId) tx = await findTransactionByCaptureId(captureId);
+        if (!tx && resourceId) tx = await findTransactionByCaptureId(resourceId);
 
         if (tx) {
           await updateTransaction(tx._id, {
