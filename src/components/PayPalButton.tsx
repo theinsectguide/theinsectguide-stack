@@ -50,7 +50,7 @@ export const PayPalButton: React.FC<PayPalButtonProps> = ({ plan, price, onSucce
         <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
           <span className="flex items-center gap-1">
             <ShieldCheck className="w-3.5 h-3.5 text-[#10b981]" />
-            48h money-back guarantee
+            Encrypted secure checkout
           </span>
           <a href="#login" className="text-[#2e86ff] hover:underline font-medium">
             Already have account? Sign In
@@ -256,10 +256,10 @@ export const PayPalButton: React.FC<PayPalButtonProps> = ({ plan, price, onSucce
         )}
       </div>
 
-      {/* Guarantee Notice */}
+      {/* Secure Checkout Notice */}
       <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 pt-1">
         <ShieldCheck className="w-3.5 h-3.5 text-[#10b981]" />
-        <span>Garantie satisfait ou remboursé 48h sur le 1er paiement</span>
+        <span>Paiement sécurisé et chiffré via PayPal</span>
       </div>
 
       {/* Full Modal Confirmation on Payment / Subscription Receipt */}

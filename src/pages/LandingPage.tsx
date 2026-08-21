@@ -215,7 +215,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
               <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6 pt-2 text-xs text-slate-400">
                 <div className="flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-[#10b981]" />
-                  <span className="font-medium text-slate-200">48h money-back guarantee</span>
+                  <span className="font-medium text-slate-200">Cancel anytime</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Zap className="w-4 h-4 text-amber-400" />
@@ -406,7 +406,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
         </div>
       </section>
 
-      {/* 48-HOUR MONEY-BACK GUARANTEE BANNER UNDER HERO */}
+      {/* PRO MEMBERSHIP HIGHLIGHT BANNER UNDER HERO */}
       <section className="max-w-7xl mx-auto px-4 lg:px-8 -mt-4 sm:-mt-6">
         <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-950/90 via-[#122e26] to-emerald-950/90 border-2 border-emerald-500/60 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <div className="flex items-center gap-3.5">
@@ -415,10 +415,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
             </div>
             <div>
               <h3 className="font-display font-black text-sm sm:text-base text-white">
-                48-hour money-back guarantee* — not satisfied? Full refund, no questions asked.
+                Comprehensive Pro Intelligence — Unlimited AI scans & habitat guides.
               </h3>
               <p className="text-[11px] sm:text-xs text-emerald-300">
-                Test all scanner features, pest guides, and outbreak alerts with zero risk.
+                Test all scanner features, pest guides, and outbreak alerts with ease.
               </p>
             </div>
           </div>
@@ -426,7 +426,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
             onClick={() => onNavigate('pricing')}
             className="shrink-0 w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#10b981] hover:bg-emerald-400 text-black font-display font-extrabold text-xs shadow-lg active:scale-98 transition-all flex items-center justify-center gap-1.5"
           >
-            <span>Try Risk-Free</span>
+            <span>Explore Pro Plans</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -462,22 +462,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
         </div>
       </section>
 
-      {/* DEDICATED "RISK-FREE — TRY FOR 48 HOURS" SECTION */}
+      {/* DEDICATED PRO HIGHLIGHT SECTION */}
       <section className="max-w-5xl mx-auto px-4 lg:px-8">
         <div className="rounded-3xl bg-[#17172c] border-2 border-emerald-500/40 p-6 sm:p-10 shadow-2xl space-y-6 text-center">
           <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center mx-auto text-[#10b981] shadow-[0_0_25px_rgba(16,185,129,0.3)]">
-            <ShieldCheck className="w-9 h-9" />
+            <Sparkles className="w-9 h-9" />
           </div>
 
           <div className="space-y-2 max-w-2xl mx-auto">
             <span className="text-xs uppercase tracking-widest font-bold text-[#10b981]">
-              Zero Risk • 100% Peace of Mind
+              Instant Access • Complete Peace of Mind
             </span>
             <h2 className="font-display font-black text-2xl sm:text-3xl md:text-4xl text-white">
-              Risk-free — try for 48 hours
+              Unlock the Ultimate Entomology Companion
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              We want you to feel completely confident. Subscribe to any plan, explore our instant AI photo diagnostics, full global encyclopedia, and clinical first-aid triage tools. If you’re not 100% satisfied within 48 hours, request a full refund with 1 click from your dashboard.
+              Subscribe to any plan and explore our instant AI photo diagnostics, full global encyclopedia, and clinical first-aid triage tools across all your devices. Cancel anytime from your account settings with a single click.
             </p>
           </div>
 
@@ -493,7 +493,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
           </div>
 
           <p className="text-[11px] sm:text-xs text-slate-400 max-w-lg mx-auto leading-relaxed border-t border-slate-800/80 pt-4">
-            *Valid on first payment only, within 48 hours of subscription. Subsequent payments are non-refundable.
+            *Includes all future taxonomic databases and seasonal forecast updates.
           </p>
         </div>
       </section>
@@ -537,7 +537,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
           </div>
 
           <p className="text-xs text-slate-400">
-            48-hour unconditional money-back guarantee on your first subscription payment.
+            Instant activation across all devices • Cancel subscription anytime in 1 click.
           </p>
         </div>
       </section>

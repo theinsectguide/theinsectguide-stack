@@ -219,7 +219,7 @@ export const MonthlyCheckoutModal: React.FC<MonthlyCheckoutModalProps> = ({
               </div>
             )}
 
-            {/* Perks & Guarantee */}
+            {/* Perks & Details */}
             <div className="p-3.5 rounded-2xl bg-[#1c1c38] border border-slate-700/60 space-y-2 text-xs text-slate-300">
               <div className="flex items-center gap-2 text-emerald-400 font-semibold">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
@@ -227,7 +227,7 @@ export const MonthlyCheckoutModal: React.FC<MonthlyCheckoutModalProps> = ({
               </div>
               <div className="flex items-center gap-2 text-slate-400 text-[11px]">
                 <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>48-hour money-back guarantee on the first payment</span>
+                <span>Instant activation across all devices • Encrypted checkout</span>
               </div>
             </div>
           </>

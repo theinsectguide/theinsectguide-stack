@@ -8,10 +8,8 @@ import {
   CreditCard,
   History,
   AlertTriangle,
-  RotateCcw,
   XCircle,
   CheckCircle2,
-  Clock,
   LogOut,
   Loader2,
   Smartphone,
@@ -32,7 +30,6 @@ export const SettingsPage: React.FC<{ onNavigate: (tab: string) => void; onGoBac
 
   // Billing Actions State
   const [cancelling, setCancelling] = useState(false);
-  const [refunding, setRefunding] = useState(false);
   const [billingMessage, setBillingMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showInstallModal, setShowInstallModal] = useState(false);
   const [userTransactions, setUserTransactions] = useState<any[]>([]);
@@ -60,49 +57,6 @@ export const SettingsPage: React.FC<{ onNavigate: (tab: string) => void; onGoBac
     refreshUser();
     fetchTransactions();
   }, [token]);
-
-  // 48h Countdown Timer Calculation
-  const [timeLeft48h, setTimeLeft48h] = useState<{
-    hours: number;
-    minutes: number;
-    seconds: number;
-    isExpired: boolean;
-    hasPayment: boolean;
-  }>({
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-    isExpired: true,
-    hasPayment: false,
-  });
-
-  useEffect(() => {
-    if (!user?.last_payment_date) {
-      setTimeLeft48h({ hours: 0, minutes: 0, seconds: 0, isExpired: true, hasPayment: false });
-      return;
-    }
-
-    const calculateCountdown = () => {
-      const paymentTime = new Date(user.last_payment_date!).getTime();
-      const expiresAt = paymentTime + 48 * 60 * 60 * 1000;
-      const now = Date.now();
-      const difference = expiresAt - now;
-
-      if (difference <= 0) {
-        setTimeLeft48h({ hours: 0, minutes: 0, seconds: 0, isExpired: true, hasPayment: true });
-      } else {
-        const totalSeconds = Math.floor(difference / 1000);
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-        setTimeLeft48h({ hours, minutes, seconds, isExpired: false, hasPayment: true });
-      }
-    };
-
-    calculateCountdown();
-    const interval = setInterval(calculateCountdown, 1000);
-    return () => clearInterval(interval);
-  }, [user?.last_payment_date]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,36 +96,6 @@ export const SettingsPage: React.FC<{ onNavigate: (tab: string) => void; onGoBac
       setBillingMessage({ type: 'error', text: err.message || 'Connection error.' });
     } finally {
       setCancelling(false);
-    }
-  };
-
-  const handleRequestRefund = async () => {
-    if (!token) return;
-    if (!confirm('Are you sure you want to request a full 48-hour guarantee refund? This will immediately cancel your Pro features and refund your payment to PayPal.')) {
-      return;
-    }
-
-    setRefunding(true);
-    setBillingMessage(null);
-
-    try {
-      const res = await fetch('/api/subscription/refund', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setBillingMessage({ type: 'success', text: data.message || 'Refund successfully processed.' });
-        await refreshUser();
-        await fetchTransactions();
-      } else {
-        setBillingMessage({ type: 'error', text: data.error || 'Refund request rejected.' });
-        await fetchTransactions();
-      }
-    } catch (err: any) {
-      setBillingMessage({ type: 'error', text: err.message || 'Connection error.' });
-    } finally {
-      setRefunding(false);
     }
   };
 
@@ -245,7 +169,7 @@ export const SettingsPage: React.FC<{ onNavigate: (tab: string) => void; onGoBac
         </div>
       </div>
 
-      {/* BILLING, PAYMENTS & 48-HOUR GUARANTEE CARD */}
+      {/* BILLING & SUBSCRIPTION STATEMENT CARD */}
       <div className="rounded-2xl sm:rounded-3xl bg-[#1c1c34] border border-[#2e2e50] p-4 sm:p-6 md:p-8 shadow-xl space-y-5">
         <div className="flex items-center justify-between gap-2 border-b border-[#2a2a4a] pb-4">
           <h3 className="font-display font-bold text-base sm:text-lg text-white flex items-center gap-2">
@@ -450,60 +374,6 @@ export const SettingsPage: React.FC<{ onNavigate: (tab: string) => void; onGoBac
             </div>
           )}
         </div>
-
-        {/* 48-HOUR MONEY BACK GUARANTEE & LIVE COUNTDOWN */}
-        {user?.last_payment_date && user.subscription_status !== 'refunded' && (
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-[#181830] to-[#1e1e3c] border border-[#3b3b64] space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div>
-                <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <span>48-Hour Money-Back Guarantee</span>
-                </h4>
-                <p className="text-[11px] text-slate-400">
-                  Full 100% refund available within 48 hours of initial transaction.
-                </p>
-              </div>
-
-              {/* Countdown badge */}
-              {!timeLeft48h.isExpired && !user.refund_requested ? (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-950/60 border border-amber-500/40 text-amber-300 text-xs font-mono font-bold shrink-0">
-                  <Clock className="w-3.5 h-3.5 animate-spin" />
-                  <span>
-                    {String(timeLeft48h.hours).padStart(2, '0')}h {String(timeLeft48h.minutes).padStart(2, '0')}m {String(timeLeft48h.seconds).padStart(2, '0')}s remaining
-                  </span>
-                </div>
-              ) : (
-                <div className="px-3 py-1 rounded-lg bg-slate-800 text-slate-400 text-xs font-medium shrink-0">
-                  Guarantee Window Expired
-                </div>
-              )}
-            </div>
-
-            {/* Refund Action / Expired notice */}
-            {!timeLeft48h.isExpired && !user.refund_requested ? (
-              <div className="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-slate-700/60">
-                <p className="text-[11px] text-slate-300">
-                  Dissatisfied with your experience? You can request an automated refund now.
-                </p>
-                <button
-                  onClick={handleRequestRefund}
-                  disabled={refunding}
-                  className="min-h-[38px] px-4 py-2 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-500/50 text-rose-200 text-xs font-bold transition-all flex items-center justify-center gap-2 shrink-0 disabled:opacity-50"
-                >
-                  {refunding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
-                  <span>Claim 48h Refund</span>
-                </button>
-              </div>
-            ) : (
-              <div className="p-2.5 rounded-xl bg-[#121220] text-[11px] text-slate-400">
-                {user.refund_requested
-                  ? 'A 48-hour refund has already been claimed and credited to your PayPal account.'
-                  : 'The 48-hour refund period has concluded. Subscriptions can be cancelled at any time to prevent future billing cycles.'}
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Cancellation Controls */}
         {isPro && user?.subscription_status === 'active' && (

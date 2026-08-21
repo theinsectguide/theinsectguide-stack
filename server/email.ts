@@ -247,8 +247,8 @@ export async function sendPaymentConfirmedEmail(user: UserDoc, planName: string,
           <td style="font-weight: 700; color: #ffffff; text-align: right;">${amount}</td>
         </tr>
         <tr>
-          <td style="color: #94a3b8;">48-Hour Guarantee:</td>
-          <td style="font-weight: 700; color: #10b981; text-align: right;">Active (100% Money-Back)</td>
+          <td style="color: #94a3b8;">Subscription Status:</td>
+          <td style="font-weight: 700; color: #10b981; text-align: right;">Active &amp; Verified</td>
         </tr>
         <tr>
           <td style="color: #94a3b8;">Access Level:</td>
@@ -310,39 +310,7 @@ export async function sendCancellationEmail(user: UserDoc) {
 }
 
 /**
- * 4. Email de confirmation de remboursement 48h
- */
-export async function sendRefundEmail(user: UserDoc, refundId?: string, refundAmount?: string) {
-  const subject = 'Refund Processed — The Insect Guide 48-Hour Guarantee';
-  const amountDisplay = refundAmount ? (refundAmount.startsWith('$') ? refundAmount : `$${refundAmount}`) : '';
-  const content = `
-    <h1 style="color: #ffffff; font-size: 22px; font-weight: 800; margin: 0 0 16px 0;">
-      48-Hour Guarantee: Refund Confirmed
-    </h1>
-    <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1; margin: 0 0 20px 0;">
-      Your refund request under our <strong>48-hour satisfaction guarantee</strong> has been transmitted and confirmed with PayPal.
-    </p>
-
-    <div style="background-color: #242442; border: 1px solid #3b3b66; border-left: 4px solid #10b981; border-radius: 12px; padding: 18px; margin: 24px 0;">
-      <p style="margin: 0 0 8px 0; font-size: 14px; line-height: 1.6; color: #e2e8f0;">
-        ${amountDisplay ? `The refunded amount of <strong>${amountDisplay}</strong>` : 'The full payment amount'} is returning to your original payment method (PayPal or Credit/Debit card).
-      </p>
-      ${refundId ? `<p style="margin: 0; font-size: 13px; color: #94a3b8; font-family: monospace;">PayPal Refund Reference: <strong>${refundId}</strong></p>` : ''}
-      <p style="margin: 8px 0 0 0; font-size: 12.5px; color: #64748b;">
-        Depending on your bank or payment issuer, this refund will appear on your statement within 3 to 5 business days.
-      </p>
-    </div>
-
-    <p style="font-size: 13.5px; line-height: 1.6; color: #94a3b8;">
-      We appreciate your interest in The Insect Guide. You can continue using our essential free identification and guide tools anytime.
-    </p>
-  `;
-
-  return sendEmailWithBrevo(user.email, user.name, subject, emailWrapper(content));
-}
-
-/**
- * 5. Email d'alerte saisonnière hebdomadaire (Lundi 8h UTC)
+ * 4. Email d'alerte saisonnière hebdomadaire (Lundi 8h UTC)
  */
 export async function sendWeeklySeasonalAlertEmail(
   user: { email: string; name?: string },

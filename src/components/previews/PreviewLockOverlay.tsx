@@ -15,7 +15,7 @@ export const PreviewLockOverlay: React.FC<PreviewLockOverlayProps> = ({
   description = 'Subscribe to unlock complete entomological intelligence, detailed guides, and full access.',
   onUnlock,
   isAuthenticated,
-  badgeText = '48h Money-Back Guarantee',
+  badgeText = 'Instant Access • Cancel Anytime',
 }) => {
   return (
     <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-[#141428]/85 via-[#1a1a32]/95 to-[#141428]/95 backdrop-blur-[6px] rounded-2xl sm:rounded-3xl border border-emerald-500/30 text-center shadow-2xl">

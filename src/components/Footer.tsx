@@ -13,7 +13,7 @@ export const Footer: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNav
     } else if (type === 'terms') {
       setModalContent({
         title: 'Terms of Service',
-        body: 'Subscriptions are billed in advance on a recurring monthly ($4.99) or annual ($29.99) basis. A 48-hour money-back guarantee is honored on your initial subscription payment. Cancellations immediately prevent renewal while preserving access until the billing cycle terminates.',
+        body: 'Subscriptions are billed in advance on a recurring monthly ($4.99) or annual ($29.99) basis. Cancellations immediately prevent renewal while preserving access until the billing cycle terminates.',
       });
     } else {
       setModalContent({
@@ -98,7 +98,7 @@ export const Footer: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNav
                 </button>
               </li>
               <li className="pt-2 text-[11px] text-slate-500">
-                48-hour Money-Back Guarantee
+                Encrypted & Secure Transactions
               </li>
             </ul>
           </div>

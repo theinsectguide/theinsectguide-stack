@@ -62,7 +62,6 @@ import {
   handleVerifyPayPalSubscription,
   handleGetSubscriptionDetails,
   handleCancelSubscription,
-  handleRequestRefund,
   handlePayPalWebhook,
 } from './server/paypal';
 import { UserDoc } from './server/types';
@@ -786,7 +785,6 @@ app.post('/api/paypal/create-subscription', requireAuth, handleCreatePayPalSubsc
 app.post('/api/paypal/verify-subscription', requireAuth, handleVerifyPayPalSubscription);
 app.get('/api/subscription/details', requireAuth, handleGetSubscriptionDetails);
 app.post('/api/subscription/cancel', requireAuth, handleCancelSubscription);
-app.post('/api/subscription/refund', requireAuth, handleRequestRefund);
 app.get('/api/subscription/transactions', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const transactions = await getTransactionsByUserId(req.user!._id);

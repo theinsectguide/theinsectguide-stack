@@ -427,7 +427,7 @@ export const AdminDashboardPage: React.FC<{ onNavigate: (tab: string) => void; o
                   <span>Billing Lifecycle Emails</span>
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  Payment confirmation, cancel auto-renewal notices, and 48-hr refunds.
+                  Payment confirmation and cancel auto-renewal notifications.
                 </p>
               </div>
 

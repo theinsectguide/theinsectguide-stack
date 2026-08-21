@@ -52,7 +52,7 @@ export const AlertsPreview: React.FC<AlertsPreviewProps> = ({ onNavigate, isAuth
           </button>
           <div className="flex items-center gap-2 text-xs text-emerald-400 font-medium px-3 py-2 rounded-xl bg-emerald-950/40 border border-emerald-500/20">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>48-hour money-back guarantee</span>
+            <span>Instant access • Cancel anytime</span>
           </div>
         </div>
       </div>
@@ -153,7 +153,7 @@ export const AlertsPreview: React.FC<AlertsPreviewProps> = ({ onNavigate, isAuth
 
               <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium mt-3">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>48h money-back guarantee • Cancel anytime</span>
+                <span>Instant activation • Cancel anytime</span>
               </div>
             </div>
           </div>

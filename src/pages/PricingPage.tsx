@@ -64,10 +64,10 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
           Upgrade to Pro for unlimited AI-powered insect identification, comprehensive habitat guides, and advanced entomological tools.
         </p>
 
-        {/* 48h Guarantee Trust Badge */}
+        {/* Trust Badge */}
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs font-bold shadow-md shadow-emerald-950/40 mt-2">
           <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span>48-Hour Money-Back Guarantee on your initial payment • Instant refund directly through PayPal</span>
+          <span>Secure payments processed with PayPal • Cancel anytime in 1 click</span>
         </div>
       </div>
 
@@ -259,7 +259,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
             )}
             <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>48-hour money-back guarantee active</span>
+              <span>Secure encrypted checkout via PayPal</span>
             </div>
           </div>
         </div>
@@ -323,8 +323,8 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
 
         {[
           {
-            q: 'How does the 48-hour money-back guarantee work?',
-            a: 'If you are not 100% satisfied with The Insect Guide Pro, you can request a full refund within 48 hours of your initial subscription payment directly from your Account Settings. The refund is executed automatically via PayPal without hassle.',
+            q: 'How do I access Pro features after subscribing?',
+            a: 'Your Pro features activate instantly upon successful checkout. You will immediately have unlimited AI scans, full encyclopedia access, and field journal synchronization.',
           },
           {
             q: 'Can I cancel my subscription at any time?',

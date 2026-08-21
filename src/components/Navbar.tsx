@@ -353,7 +353,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
               >
                 <Sparkles className="w-4 h-4 text-amber-400" />
-                Pro Pricing & 48h Guarantee
+                Pro Pricing & Plans
               </button>
               <button
                 onClick={() => {

@@ -97,7 +97,7 @@ export const EncyclopediaPreview: React.FC<EncyclopediaPreviewProps> = ({ onNavi
           </button>
           <div className="flex items-center gap-2 text-xs text-emerald-400 font-medium px-3 py-2 rounded-xl bg-emerald-950/40 border border-emerald-500/20">
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>48-hour money-back guarantee</span>
+            <span>Instant access • Cancel anytime</span>
           </div>
         </div>
       </div>
