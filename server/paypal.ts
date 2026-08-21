@@ -265,7 +265,7 @@ export async function handleVerifyPayPalSubscription(req: AuthRequest, res: Resp
       });
     }
 
-    // 2. Fetch Subscription Transactions to get real Capture ID of the 1st payment
+    // 2. Fetch Subscription Transactions to get real Sale ID of the 1st payment
     let captureId = orderID || subscriptionID;
     try {
       const now = new Date();
@@ -288,7 +288,7 @@ export async function handleVerifyPayPalSubscription(req: AuthRequest, res: Resp
           const firstCompletedTx = txData.transactions.find((t: any) => t.status === 'COMPLETED') || txData.transactions[0];
           if (firstCompletedTx?.id) {
             captureId = firstCompletedTx.id;
-            console.log(`[PayPal Subscription] Retrieved real capture ID ${captureId} for subscription ${subscriptionID}`);
+            console.log(`[PayPal Subscription] Retrieved real Sale ID ${captureId} for subscription ${subscriptionID}`);
           }
         }
       }
@@ -319,11 +319,13 @@ export async function handleVerifyPayPalSubscription(req: AuthRequest, res: Resp
       refund_requested: false,
     });
 
-    // 5. Record verified transaction in persistent database
+    // 5. Record verified transaction in persistent database with Sale ID and Refund URL
     await createTransaction({
       user_id: user._id,
       order_id: orderID || subscriptionID,
       capture_id: captureId,
+      sale_id: captureId,
+      refund_href: `${PAYPAL_API_BASE}/v1/payments/sale/${captureId}/refund`,
       subscription_id: subscriptionID,
       payer_email: payerEmail,
       payer_id: payerId,
@@ -812,14 +814,15 @@ export async function handleRequestRefund(req: AuthRequest, res: Response) {
     // FLUX A: ABONNEMENT MENSUEL ($4.99) — PAYPAL SALE REFUND
     // =========================================================================
     if (isMonthlySubscription) {
-      let saleId = targetTx.capture_id;
+      let saleId = targetTx.sale_id || targetTx.capture_id;
+      let refundUrl = targetTx.refund_href || (targetTx.raw_details?.links?.find((l: any) => l.rel === 'refund')?.href);
 
-      // If saleId is missing or is the Subscription ID (starts with I-), resolve from Subscription Transactions API
-      if ((!saleId || saleId.startsWith('I-') || saleId.startsWith('ORDER_')) && subId) {
+      // If saleId is missing or is placeholder (starts with I- or ORDER_), resolve from Subscription Transactions API
+      if ((!saleId || saleId.startsWith('I-') || saleId.startsWith('ORDER_') || saleId === 'FAILED') && subId) {
         try {
-          const txTimeIso = new Date(targetTx.created_at);
-          const startTime = new Date(txTimeIso.getTime() - 24 * 60 * 60 * 1000).toISOString();
-          const endTime = new Date(txTimeIso.getTime() + 48 * 60 * 60 * 1000).toISOString();
+          const now = new Date();
+          const startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+          const endTime = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
 
           const txRes = await fetch(
             `${PAYPAL_API_BASE}/v1/billing/subscriptions/${subId}/transactions?start_time=${startTime}&end_time=${endTime}`,
@@ -837,14 +840,23 @@ export async function handleRequestRefund(req: AuthRequest, res: Response) {
               const completedTx = txData.transactions.find((t: any) => t.status === 'COMPLETED') || txData.transactions[0];
               if (completedTx?.id) {
                 saleId = completedTx.id;
-                await updateTransaction(targetTx._id, { capture_id: saleId });
-                console.log(`[PayPal Refund] Resolved real Sale ID ${saleId} for subscription ${subId}`);
+                refundUrl = `${PAYPAL_API_BASE}/v1/payments/sale/${saleId}/refund`;
+                await updateTransaction(targetTx._id, {
+                  sale_id: saleId,
+                  capture_id: saleId,
+                  refund_href: refundUrl,
+                });
+                console.log(`[PayPal Refund] Resolved real Sale ID ${saleId} from subscription ${subId}`);
               }
             }
           }
         } catch (resErr) {
           console.warn('[PayPal Refund] Could not resolve sale ID via subscription transactions:', resErr);
         }
+      }
+
+      if (!refundUrl && saleId) {
+        refundUrl = `${PAYPAL_API_BASE}/v1/payments/sale/${saleId}/refund`;
       }
 
       if (!saleId || saleId === 'FAILED' || saleId.startsWith('ORDER_') || saleId.startsWith('I-')) {
@@ -854,27 +866,6 @@ export async function handleRequestRefund(req: AuthRequest, res: Response) {
       }
 
       resourceIdentifier = `Sale ${saleId}`;
-
-      // Retrieve HATEOAS "refund" link from Sale if available
-      let refundUrl = `${PAYPAL_API_BASE}/v1/payments/sale/${saleId}/refund`;
-      try {
-        const saleRes = await fetch(`${PAYPAL_API_BASE}/v1/payments/sale/${saleId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        if (saleRes.ok) {
-          const saleData: any = await saleRes.json();
-          const hateoasRefundLink = saleData.links?.find((l: any) => l.rel === 'refund')?.href;
-          if (hateoasRefundLink) {
-            refundUrl = hateoasRefundLink;
-            console.log(`[PayPal Refund] Using official HATEOAS refund link from Sale ${saleId}: ${refundUrl}`);
-          }
-        }
-      } catch (saleErr) {
-        console.warn(`[PayPal Refund] Could not fetch sale details directly, falling back to ${refundUrl}:`, saleErr);
-      }
 
       // Set in-flight status on transaction
       await updateTransaction(targetTx._id, {
@@ -1251,29 +1242,49 @@ export async function handlePayPalWebhook(req: any, res: Response) {
     else if (eventType === 'PAYMENT.SALE.COMPLETED') {
       const saleId = resource?.id;
       const subId = resource?.billing_agreement_id;
+      const refundHref = resource?.links?.find((l: any) => l.rel === 'refund')?.href;
       const amountVal = resource?.amount?.total || '4.99';
       const currencyVal = resource?.amount?.currency || 'USD';
       const paymentTime = resource?.create_time || new Date().toISOString();
 
-      console.log(`[PayPal Webhook] Recurring Sale Completed: Sale ${saleId}, Subscription ${subId}, Amount: $${amountVal} ${currencyVal}`);
+      console.log(`[PayPal Webhook] Sale Completed: Sale ${saleId}, Subscription ${subId}, Amount: $${amountVal} ${currencyVal}, Refund URL: ${refundHref}`);
 
       if (subId) {
         const targetUser = await findUserBySubscriptionId(subId);
         if (targetUser) {
-          // Record recurring payment transaction
-          await createTransaction({
-            user_id: targetUser._id,
-            order_id: saleId,
-            capture_id: saleId,
-            subscription_id: subId,
-            payer_email: targetUser.email,
-            amount: amountVal,
-            currency: currencyVal,
-            plan: 'monthly',
-            status: 'COMPLETED',
-            created_at: paymentTime,
-            raw_details: resource,
-          });
+          // Check if an existing transaction is already recorded for this subscription/sale
+          const existingTx = await findTransactionBySubscriptionId(subId);
+          if (existingTx && (existingTx.status === 'COMPLETED' || existingTx.plan === 'monthly')) {
+            await updateTransaction(existingTx._id, {
+              order_id: saleId,
+              capture_id: saleId,
+              sale_id: saleId,
+              refund_href: refundHref || `${PAYPAL_API_BASE}/v1/payments/sale/${saleId}/refund`,
+              amount: amountVal,
+              currency: currencyVal,
+              status: 'COMPLETED',
+              raw_details: resource,
+            });
+            console.log(`[PayPal Webhook] Attached verified Sale ID ${saleId} and refund HREF to existing transaction ${existingTx._id}`);
+          } else {
+            // Record payment transaction with real Sale ID and refund HREF
+            await createTransaction({
+              user_id: targetUser._id,
+              order_id: saleId,
+              capture_id: saleId,
+              sale_id: saleId,
+              refund_href: refundHref || `${PAYPAL_API_BASE}/v1/payments/sale/${saleId}/refund`,
+              subscription_id: subId,
+              payer_email: targetUser.email,
+              amount: amountVal,
+              currency: currencyVal,
+              plan: 'monthly',
+              status: 'COMPLETED',
+              created_at: paymentTime,
+              raw_details: resource,
+            });
+            console.log(`[PayPal Webhook] Created new transaction with verified Sale ID ${saleId} and refund HREF`);
+          }
 
           // Keep user account active and update last payment date
           await updateUser(targetUser._id, {

@@ -172,6 +172,8 @@ export interface TransactionDoc {
   user_id: string;
   order_id: string;
   capture_id: string;
+  sale_id?: string;
+  refund_href?: string;
   subscription_id?: string;
   payer_email?: string;
   payer_id?: string;
