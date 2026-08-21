@@ -265,56 +265,6 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* Feature Comparison Table */}
-      <div className="max-w-4xl mx-auto rounded-2xl sm:rounded-3xl bg-[#1a1a2e] border border-slate-700/80 p-5 sm:p-8 shadow-xl space-y-6">
-        <h3 className="font-display font-bold text-lg sm:text-xl text-white text-center">
-          Compare Free vs. Pro Membership
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs sm:text-sm text-left">
-            <thead>
-              <tr className="border-b border-slate-700 text-slate-400">
-                <th className="pb-3 font-semibold">Feature</th>
-                <th className="pb-3 font-semibold text-center w-28 sm:w-32">Free</th>
-                <th className="pb-3 font-semibold text-center w-32 sm:w-40 text-emerald-400">Pro</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800 text-slate-300">
-              <tr>
-                <td className="py-3 font-medium text-white">Daily AI Identifications</td>
-                <td className="py-3 text-center text-slate-400">3 per day</td>
-                <td className="py-3 text-center font-bold text-emerald-400">Unlimited</td>
-              </tr>
-              <tr>
-                <td className="py-3 font-medium text-white">Species Database Access</td>
-                <td className="py-3 text-center text-slate-400">Top 50 Common</td>
-                <td className="py-3 text-center font-bold text-emerald-400">Full 1,000+ Guide</td>
-              </tr>
-              <tr>
-                <td className="py-3 font-medium text-white">Field Journal & GPS Logs</td>
-                <td className="py-3 text-center text-slate-400">Basic (5 entries)</td>
-                <td className="py-3 text-center font-bold text-emerald-400">Unlimited + GPS Export</td>
-              </tr>
-              <tr>
-                <td className="py-3 font-medium text-white">Audio Identifier (Beta)</td>
-                <td className="py-3 text-center text-slate-400">—</td>
-                <td className="py-3 text-center font-bold text-emerald-400">Included</td>
-              </tr>
-              <tr>
-                <td className="py-3 font-medium text-white">PDF Field Guide Export</td>
-                <td className="py-3 text-center text-slate-400">—</td>
-                <td className="py-3 text-center font-bold text-emerald-400">Included</td>
-              </tr>
-              <tr>
-                <td className="py-3 font-medium text-white">Priority AI Processing</td>
-                <td className="py-3 text-center text-slate-400">—</td>
-                <td className="py-3 text-center font-bold text-emerald-400">Fast-Lane Queues</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
       {/* FAQ Section */}
       <div className="max-w-3xl mx-auto space-y-4">
         <h3 className="font-display font-bold text-xl sm:text-2xl text-white text-center mb-6">
