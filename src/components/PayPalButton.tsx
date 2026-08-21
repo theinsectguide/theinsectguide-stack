@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PayPalButtons } from '@paypal/react-paypal-js';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, Loader2, CheckCircle2, AlertCircle, Lock, LayoutDashboard, Sparkles, ArrowRight } from 'lucide-react';
+import { ShieldCheck, Loader2, CheckCircle2, AlertCircle, Lock, Sparkles } from 'lucide-react';
 
 interface PayPalButtonProps {
   plan: 'monthly' | 'annual';
@@ -265,54 +265,28 @@ export const PayPalButton: React.FC<PayPalButtonProps> = ({ plan, price, onSucce
       {/* Full Modal Confirmation on Payment / Subscription Receipt */}
       {completed && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="max-w-md w-full rounded-3xl bg-[#16162c] border-2 border-emerald-500/80 shadow-2xl p-6 sm:p-7 text-center space-y-5 animate-in zoom-in-95 duration-200">
+          <div className="max-w-md w-full rounded-3xl bg-[#16162c] border-2 border-emerald-500/80 shadow-2xl p-6 sm:p-8 text-center space-y-6 animate-in zoom-in-95 duration-200">
             {/* Success Icon */}
-            <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/30 animate-bounce">
+            <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/30">
               <CheckCircle2 className="w-10 h-10" />
             </div>
 
             {/* Title & Description */}
             <div className="space-y-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold uppercase tracking-wider">
-                <Sparkles className="w-3.5 h-3.5" />
-                {isMonthlyRecurring ? 'Abonnement PayPal Confirmé' : 'Paiement Confirmé'}
-              </span>
-              <h3 className="font-display font-black text-xl sm:text-2xl text-white">
-                {isMonthlyRecurring ? 'Abonnement Pro Activé !' : 'Paiement Reçu avec Succès !'}
+              <h3 className="font-display font-black text-2xl text-white">
+                Payment successful!
               </h3>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Votre formule{' '}
-                <strong className="text-emerald-400 font-bold">
-                  {plan === 'annual' ? 'Annuelle ($29.99/an Pass)' : 'Mensuelle ($4.99/mois Récurrent)'}
-                </strong>{' '}
-                est validée. Votre statut <strong className="text-white">PRO</strong> est immédiatement actif.
+              <p className="text-sm text-slate-300 font-medium">
+                Your Pro account is now active.
               </p>
-            </div>
-
-            {/* Feature Perks Summary */}
-            <div className="rounded-2xl bg-[#1f1f3a] border border-[#303058] p-3.5 text-left text-xs text-slate-300 space-y-1.5">
-              <div className="flex items-center gap-2 text-emerald-300 font-bold">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Accès illimité à l'identification Claude Vision</span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-200">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Journal GPS d'observation &amp; Export PDF</span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-200">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Garantie satisfait ou remboursé 48h active</span>
-              </div>
             </div>
 
             {/* OK Action Button directly to Dashboard */}
             <button
               onClick={handleConfirmOk}
-              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-[#10b981] hover:brightness-110 text-slate-950 font-display font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/25 active:scale-98 transition-all cursor-pointer"
+              className="w-full max-w-xs py-3.5 px-8 mx-auto rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-display font-black text-base shadow-lg shadow-emerald-500/30 transition-all cursor-pointer"
             >
-              <LayoutDashboard className="w-5 h-5" />
-              <span>OK — Accéder à mon Dashboard</span>
-              <ArrowRight className="w-4 h-4" />
+              OK
             </button>
           </div>
         </div>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, Loader2, CheckCircle2, AlertCircle, X, Sparkles, LayoutDashboard, ArrowRight, Lock } from 'lucide-react';
+import { ShieldCheck, Loader2, CheckCircle2, AlertCircle, X, Sparkles, Lock } from 'lucide-react';
 
 interface AnnualCheckoutModalProps {
   isOpen: boolean;
@@ -215,23 +215,21 @@ export const AnnualCheckoutModal: React.FC<AnnualCheckoutModalProps> = ({
 
         {/* Completed Modal Popup */}
         {completed && (
-          <div className="absolute inset-0 z-50 rounded-3xl bg-[#16162c] p-6 sm:p-8 flex flex-col justify-center items-center text-center space-y-5 animate-in fade-in">
+          <div className="absolute inset-0 z-50 rounded-3xl bg-[#16162c] p-6 sm:p-8 flex flex-col justify-center items-center text-center space-y-6 animate-in fade-in">
             <div className="w-16 h-16 rounded-full bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400 flex items-center justify-center shadow-lg shadow-emerald-500/30">
               <CheckCircle2 className="w-10 h-10" />
             </div>
-            <div className="space-y-1">
-              <h3 className="text-2xl font-display font-black text-white">Paiement Validé !</h3>
-              <p className="text-xs text-slate-300">
-                Votre Pass Pro <strong className="text-emerald-400">1 An ($29.99)</strong> est actif.
+            <div className="space-y-2">
+              <h3 className="text-2xl font-display font-black text-white">Payment successful!</h3>
+              <p className="text-sm text-slate-300 font-medium">
+                Your Pro account is now active.
               </p>
             </div>
             <button
               onClick={handleConfirmOk}
-              className="w-full py-3.5 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
+              className="w-full max-w-xs py-3.5 px-8 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-display font-black text-base shadow-lg shadow-emerald-500/30 transition-all cursor-pointer"
             >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Accéder à mon Dashboard</span>
-              <ArrowRight className="w-4 h-4" />
+              OK
             </button>
           </div>
         )}
