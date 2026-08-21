@@ -1,142 +1,79 @@
 import React, { useState } from 'react';
-import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import { useAuth } from '../context/AuthContext';
-import { PayPalButton } from '../components/PayPalButton';
-import { Check, ShieldCheck, Zap, Sparkles, Crown, Clock, ArrowLeft, UserPlus, LayoutDashboard, CheckCircle2 } from 'lucide-react';
-
-const PAYPAL_CLIENT_ID = 'AVzCfKJSQG7YWcbPj1D6cajYS4WFNPSpUBsyd33bOJ0MZXUryqo3gR_36mgn-pfgrLAWpbr9lzlRhOCD';
-
-const MONTHLY_SCRIPT_OPTIONS = {
-  clientId: PAYPAL_CLIENT_ID,
-  currency: 'USD',
-  vault: true,
-  intent: 'subscription',
-  components: 'buttons',
-  disableFunding: 'bancontact,sofort,giropay,mybank,eps,ideal,sepa,paylater',
-};
-
-const ANNUAL_SCRIPT_OPTIONS = {
-  clientId: PAYPAL_CLIENT_ID,
-  currency: 'USD',
-  intent: 'capture',
-  components: 'buttons',
-  disableFunding: 'bancontact,sofort,giropay,mybank,eps,ideal,sepa,paylater',
-};
+import {
+  Check,
+  ShieldCheck,
+  Sparkles,
+  Zap,
+  HelpCircle,
+  Clock,
+  RefreshCcw,
+  CreditCard,
+  LayoutDashboard,
+  Lock,
+} from 'lucide-react';
+import { MonthlyCheckoutModal } from '../components/MonthlyCheckoutModal';
+import { AnnualCheckoutModal } from '../components/AnnualCheckoutModal';
 
 interface PricingPageProps {
   onNavigate: (tab: string) => void;
-  onGoBack?: () => void;
 }
 
-export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate, onGoBack }) => {
-  const { user, isPro } = useAuth();
+export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
+  const { user, isAuthenticated } = useAuth();
+  const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('annual');
+  const [isMonthlyModalOpen, setIsMonthlyModalOpen] = useState(false);
+  const [isAnnualModalOpen, setIsAnnualModalOpen] = useState(false);
+
+  const isPro = user?.tier === 'pro';
 
   const proFeatures = [
-    'Unlimited AI Photo Scans with Claude Vision',
-    'Instant 0-10 Danger & Venom Level Assessments',
-    'Sting & Bite Emergency First Aid Triage Guides',
-    'Pest & Infestation Diagnosis with DIY vs Exterminator Costs',
-    'Private Observation Journal with GPS Pinning',
-    'Export Observation Journal to PDF for entomology logs',
-    'Regional Hazard & Weather-based Insect Outbreak Alerts',
-    'Full Insect Encyclopedia covering UK, US, CA, AU & EU',
-    'PWA Offline Field Cache for remote hiking',
+    'Unlimited AI insect scans & identification',
+    'High-resolution offline guides access',
+    'Custom collection notes & GPS tagging',
+    'Advanced species comparison tool',
+    'Audio identifier for buzzing & chirps (beta)',
+    'Full access to all regions & seasonal data',
+    'Priority customer support',
   ];
 
-  return (
-    <div className="max-w-5xl mx-auto px-3 sm:px-4 py-6 md:py-12 space-y-6 sm:space-y-10">
-      {/* Top Bar with Quick Back Action */}
-      {onGoBack && (
-        <div className="flex items-center justify-between">
-          <button
-            onClick={onGoBack}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#242446]/80 hover:bg-[#2e2e56] border border-slate-700/80 text-xs text-slate-300 hover:text-white font-semibold transition-all active:scale-95 group cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4 text-[#10b981] group-hover:-translate-x-0.5 transition-transform" />
-            <span>Back</span>
-          </button>
-        </div>
-      )}
+  const handleOpenMonthlyCheckout = () => {
+    setIsMonthlyModalOpen(true);
+  };
 
-      {/* Header */}
-      <div className="text-center space-y-2.5 sm:space-y-3">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold">
-          <Crown className="w-3.5 h-3.5 shrink-0" />
-          <span>Entomological Safety & Intelligence</span>
+  const handleOpenAnnualCheckout = () => {
+    setIsAnnualModalOpen(true);
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-12 sm:space-y-16">
+      {/* Hero Section */}
+      <div className="text-center space-y-3 sm:space-y-4 max-w-3xl mx-auto">
+        <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 rounded-full bg-[#1e1e38] border border-emerald-500/30 text-emerald-400 text-xs font-semibold uppercase tracking-wider shadow-sm">
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Membership Options</span>
         </div>
-        <h1 className="font-display font-extrabold text-2xl sm:text-3xl md:text-4xl text-white">
-          Choose your protection plan
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-display font-black text-white tracking-tight leading-tight">
+          Unlock the Full Power of{' '}
+          <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-[#10b981] bg-clip-text text-transparent">
+            The Insect Guide
+          </span>
         </h1>
-        <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto px-1">
-          Instant AI identification of venomous species, emergency triage protocols, and home pest diagnosis. Cancel anytime with a 48-hour money-back guarantee.
+        <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
+          Upgrade to Pro for unlimited AI-powered insect identification, comprehensive habitat guides, and advanced entomological tools.
         </p>
+
+        {/* 48h Guarantee Trust Badge */}
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs font-bold shadow-md shadow-emerald-950/40 mt-2">
+          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>48-Hour Money-Back Guarantee on your initial payment • Instant refund directly through PayPal</span>
+        </div>
       </div>
 
-      {!user ? (
-        <div className="max-w-2xl mx-auto p-4 rounded-2xl bg-gradient-to-r from-emerald-950/60 via-[#162e24] to-emerald-950/60 border border-emerald-500/40 text-center space-y-2.5 shadow-lg">
-          <div className="flex items-center justify-center gap-2 text-xs sm:text-sm font-bold text-emerald-300">
-            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Create your account to start risk-free with a 48-hour money-back guarantee</span>
-          </div>
-          <p className="text-xs text-slate-300">
-            Sign up takes 30 seconds. Choose your plan after or directly below.
-          </p>
-          <div className="pt-1 flex items-center justify-center gap-3">
-            <button
-              onClick={() => onNavigate('register')}
-              className="px-5 py-2 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-black font-display font-extrabold text-xs shadow-md flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
-            >
-              <UserPlus className="w-3.5 h-3.5" />
-              <span>Create Free Account</span>
-            </button>
-            <button
-              onClick={() => onNavigate('login')}
-              className="px-4 py-2 rounded-xl bg-[#242446] hover:bg-[#2e2e56] border border-slate-700 text-xs text-slate-200 font-semibold transition-all cursor-pointer"
-            >
-              Sign In
-            </button>
-          </div>
-        </div>
-      ) : isPro ? (
-        <div className="max-w-2xl mx-auto p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-950/70 via-[#132c25] to-emerald-950/70 border-2 border-emerald-500/70 text-center space-y-3 shadow-xl">
-          <div className="flex items-center justify-center gap-2 text-sm sm:text-base font-bold text-emerald-300">
-            <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
-            <span>Votre statut PRO est Actif ({user.name || 'Membre'}) !</span>
-          </div>
-          <p className="text-xs text-slate-300">
-            Toutes vos fonctionnalités illimitées (scans IA, triage médical d'urgence, journal GPS, alertes météo) sont opérationnelles.
-          </p>
-          <div className="pt-1 flex items-center justify-center gap-3">
-            <button
-              onClick={() => onNavigate('dashboard')}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-[#10b981] hover:brightness-110 text-slate-950 font-display font-extrabold text-xs sm:text-sm shadow-lg flex items-center gap-2 active:scale-95 transition-all cursor-pointer"
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Accéder à mon Dashboard</span>
-            </button>
-            <button
-              onClick={() => onNavigate('scan')}
-              className="px-4 py-2.5 rounded-xl bg-[#242446] hover:bg-[#2e2e56] border border-slate-700 text-xs text-slate-200 font-semibold transition-all cursor-pointer"
-            >
-              Lancer un Scan IA
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="max-w-2xl mx-auto p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-1">
-          <p className="text-xs sm:text-sm font-semibold text-emerald-300">
-            Welcome, {user.name || 'Explorer'}!
-          </p>
-          <p className="text-xs text-slate-300">
-            Please select a Pro plan below to activate your unlimited AI scans, emergency triage protocols, and observation tools.
-          </p>
-        </div>
-      )}
-
-      {/* Interactive Plan Selector Switcher */}
-      <div className="flex items-center justify-center pt-2">
-        <div className="inline-flex p-1.5 rounded-2xl bg-[#151528] border border-[#2e2e4e] shadow-xl gap-1">
+      {/* Plan Selector Toggle Buttons */}
+      <div className="flex justify-center">
+        <div className="p-1.5 rounded-2xl bg-[#16162c] border border-slate-700/80 shadow-lg flex items-center gap-1 sm:gap-2">
           <button
             onClick={() => setSelectedPlan('monthly')}
             className={`px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
@@ -165,190 +102,275 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate, onGoBack }
         </div>
       </div>
 
-      {/* 2 Paid Plans Grid: Monthly ($4.99/mo) and Annual ($29.99/yr) */}
-      <PayPalScriptProvider
-        key={selectedPlan}
-        options={selectedPlan === 'monthly' ? MONTHLY_SCRIPT_OPTIONS : ANNUAL_SCRIPT_OPTIONS}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-stretch max-w-4xl mx-auto">
-          {/* Monthly Plan Card - NO BADGE */}
-          <div
-            onClick={() => setSelectedPlan('monthly')}
-            className={`rounded-2xl sm:rounded-3xl p-5 sm:p-8 flex flex-col justify-between space-y-5 sm:space-y-6 shadow-xl transition-all cursor-pointer ${
-              selectedPlan === 'monthly'
-                ? 'bg-[#1e1e38] border-2 border-emerald-500 shadow-emerald-950/60 ring-1 ring-emerald-500/30'
-                : 'bg-[#1a1a2e] border border-[#2e2e4e] hover:border-slate-600 opacity-90'
-            }`}
-          >
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-display font-bold text-lg sm:text-xl text-white">
-                    Monthly Plan
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Flexible month-to-month access</p>
-                </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                  selectedPlan === 'monthly' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'
-                }`}>
-                  Monthly
-                </span>
-              </div>
-
+      {/* 2 Paid Plans Grid: Monthly ($4.99/mo) and Annual ($29.99/yr) — 100% VISIBLE SIDE-BY-SIDE */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 items-stretch max-w-4xl mx-auto">
+        {/* Monthly Plan Card */}
+        <div
+          onClick={() => setSelectedPlan('monthly')}
+          className={`rounded-2xl sm:rounded-3xl p-5 sm:p-8 flex flex-col justify-between space-y-5 sm:space-y-6 shadow-xl transition-all ${
+            selectedPlan === 'monthly'
+              ? 'bg-[#1e1e38] border-2 border-emerald-500 shadow-emerald-950/60 ring-1 ring-emerald-500/30'
+              : 'bg-[#1a1a2e] border border-[#2e2e4e] hover:border-slate-600 opacity-90'
+          }`}
+        >
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
               <div>
-                <div className="text-3xl sm:text-4xl font-display font-black text-white">
-                  $4.99 <span className="text-xs sm:text-sm text-slate-400 font-normal">/ month</span>
-                </div>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Billed monthly • Cancel anytime
-                </p>
+                <h3 className="font-display font-bold text-lg sm:text-xl text-white">
+                  Monthly Plan
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">Flexible month-to-month access</p>
               </div>
-
-              <ul className="space-y-2.5 pt-2 text-xs text-slate-200">
-                {proFeatures.map((f, i) => (
-                  <li key={i} className="flex items-start gap-2.5">
-                    <Check className="w-4 h-4 text-[#10b981] shrink-0 mt-0.5" />
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                selectedPlan === 'monthly' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'
+              }`}>
+                Monthly
+              </span>
             </div>
 
-            {/* Payment Area */}
-            <div className="pt-2 border-t border-slate-700/80 space-y-3">
-              {isPro ? (
-                <div className="p-4 rounded-2xl bg-emerald-950/60 border border-[#10b981] text-center space-y-2">
-                  <span className="text-xs font-bold text-[#10b981]">PRO MEMBERSHIP ACTIVE</span>
-                  <p className="text-[11px] text-slate-300">
-                    You have full unlimited access to all features.
-                  </p>
-                  <button
-                    onClick={() => onNavigate('dashboard')}
-                    className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98 cursor-pointer"
-                  >
-                    <LayoutDashboard className="w-4 h-4" />
-                    <span>Accéder à mon Dashboard</span>
-                  </button>
-                </div>
-              ) : selectedPlan === 'monthly' ? (
-                <PayPalButton
-                  plan="monthly"
-                  price="$4.99/mo"
-                  onSuccess={() => onNavigate('dashboard')}
-                />
-              ) : (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedPlan('monthly');
-                  }}
-                  className="w-full py-3 px-4 rounded-xl bg-[#2a2a4c] hover:bg-[#34345e] border border-slate-600 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
-                >
-                  <span>Select Monthly Plan ($4.99/mo)</span>
-                </button>
-              )}
+            <div>
+              <div className="text-3xl sm:text-4xl font-display font-black text-white">
+                $4.99 <span className="text-xs sm:text-sm text-slate-400 font-normal">/ month</span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Billed monthly • Cancel anytime
+              </p>
             </div>
+
+            <ul className="space-y-2.5 pt-2 text-xs text-slate-200">
+              {proFeatures.map((f, i) => (
+                <li key={i} className="flex items-start gap-2.5">
+                  <Check className="w-4 h-4 text-[#10b981] shrink-0 mt-0.5" />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
           </div>
 
-          {/* Annual Plan Card - "Best Value" GREEN BADGE */}
-          <div
-            onClick={() => setSelectedPlan('annual')}
-            className={`relative rounded-2xl sm:rounded-3xl p-5 sm:p-8 flex flex-col justify-between space-y-5 sm:space-y-6 shadow-2xl transition-all cursor-pointer ${
-              selectedPlan === 'annual'
-                ? 'bg-gradient-to-b from-[#24244c] to-[#1a1a2e] border-2 border-emerald-500 shadow-emerald-950/60 ring-1 ring-emerald-500/40 mt-4 md:mt-0'
-                : 'bg-[#1a1a2e] border border-[#2e2e4e] hover:border-slate-600 opacity-90 mt-4 md:mt-0'
-            }`}
-          >
-            {/* Top Pill - Best Value (Green) */}
-            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-[#10b981] text-black font-display font-extrabold text-xs uppercase tracking-wider shadow-lg whitespace-nowrap">
-              Best Value — Save 50%
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-display font-bold text-lg sm:text-xl text-white flex items-center gap-2">
-                    <span>Annual Plan</span>
-                    <Crown className="w-4 h-4 text-amber-400 shrink-0" />
-                  </h3>
-                  <p className="text-xs text-slate-300 mt-0.5">Complete year-round protection</p>
-                </div>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-[#10b981] text-[11px] font-bold">
-                  50% OFF
-                </span>
-              </div>
-
-              <div>
-                <div className="text-3xl sm:text-4xl font-display font-black text-white">
-                  $29.99 <span className="text-xs sm:text-sm text-slate-400 font-normal">/ year</span>
-                </div>
-                <p className="text-xs text-[#10b981] font-semibold mt-0.5">
-                  Just $2.49/month • Billed annually ($29.99/yr)
+          {/* Payment CTA Area */}
+          <div className="pt-4 border-t border-slate-700/80 space-y-3">
+            {isPro ? (
+              <div className="p-4 rounded-2xl bg-emerald-950/60 border border-[#10b981] text-center space-y-2">
+                <span className="text-xs font-bold text-[#10b981]">PRO MEMBERSHIP ACTIVE</span>
+                <p className="text-[11px] text-slate-300">
+                  You have full unlimited access to all features.
                 </p>
-              </div>
-
-              <ul className="space-y-2.5 pt-2 text-xs text-slate-200">
-                {proFeatures.map((f, i) => (
-                  <li key={i} className="flex items-start gap-2.5">
-                    <Check className="w-4 h-4 text-[#10b981] shrink-0 mt-0.5" />
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Payment Area */}
-            <div className="pt-2 border-t border-slate-700/80 space-y-3">
-              {isPro ? (
-                <div className="p-4 rounded-2xl bg-emerald-950/60 border border-[#10b981] text-center space-y-2">
-                  <span className="text-xs font-bold text-[#10b981]">PRO MEMBERSHIP ACTIVE</span>
-                  <p className="text-[11px] text-slate-300">
-                    You have full unlimited access to all features.
-                  </p>
-                  <button
-                    onClick={() => onNavigate('dashboard')}
-                    className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98 cursor-pointer"
-                  >
-                    <LayoutDashboard className="w-4 h-4" />
-                    <span>Accéder à mon Dashboard</span>
-                  </button>
-                </div>
-              ) : selectedPlan === 'annual' ? (
-                <PayPalButton
-                  plan="annual"
-                  price="$29.99/yr"
-                  onSuccess={() => onNavigate('dashboard')}
-                />
-              ) : (
                 <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedPlan('annual');
-                  }}
-                  className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md"
+                  onClick={() => onNavigate('dashboard')}
+                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98 cursor-pointer"
                 >
-                  <span>Select Annual Pass ($29.99/yr) — Save 50%</span>
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span>Accéder à mon Dashboard</span>
                 </button>
-              )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleOpenMonthlyCheckout}
+                className="w-full py-3.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-display font-black text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20 active:scale-98 cursor-pointer"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Souscrire au Mensuel ($4.99/mo)</span>
+              </button>
+            )}
+            <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Paiement sécurisé PayPal • Carte bancaire</span>
             </div>
           </div>
         </div>
-      </PayPalScriptProvider>
 
-      {/* 48-HOUR MONEY-BACK GUARANTEE BOX UNDER THE PLANS */}
-      <div className="max-w-2xl mx-auto space-y-2">
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-950/70 via-[#132c25] to-emerald-950/70 border-2 border-emerald-500/80 shadow-xl flex items-center justify-center gap-3 text-center">
-          <ShieldCheck className="w-6 h-6 text-[#10b981] shrink-0" />
-          <span className="font-display font-extrabold text-sm sm:text-base text-white">
-            48-hour money-back guarantee* — Full refund, no questions asked. No risk.
-          </span>
+        {/* Annual Plan Card - "Best Value" GREEN BADGE */}
+        <div
+          onClick={() => setSelectedPlan('annual')}
+          className={`relative rounded-2xl sm:rounded-3xl p-5 sm:p-8 flex flex-col justify-between space-y-5 sm:space-y-6 shadow-2xl transition-all ${
+            selectedPlan === 'annual'
+              ? 'bg-gradient-to-b from-[#24244c] to-[#1a1a2e] border-2 border-emerald-500 shadow-emerald-950/60 ring-1 ring-emerald-500/40 mt-4 md:mt-0'
+              : 'bg-[#1a1a2e] border border-[#2e2e4e] hover:border-slate-600 opacity-90 mt-4 md:mt-0'
+          }`}
+        >
+          {/* Best Value Badge - PURE GREEN */}
+          <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-[#10b981] text-slate-950 text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-lg shadow-emerald-500/30 border border-emerald-300">
+            <Zap className="w-3.5 h-3.5 fill-current" />
+            <span>Best Value — Save 50%</span>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-display font-bold text-lg sm:text-xl text-white">
+                  Annual Pass
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">1-Year Full Access • Non-recurring</p>
+              </div>
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/40">
+                1 Year Pass
+              </span>
+            </div>
+
+            <div>
+              <div className="text-3xl sm:text-4xl font-display font-black text-white">
+                $29.99 <span className="text-xs sm:text-sm text-slate-400 font-normal">/ year</span>
+              </div>
+              <p className="text-xs text-emerald-400 mt-0.5 font-medium">
+                Just $2.49/month • Billed annually ($29.99/yr)
+              </p>
+            </div>
+
+            <ul className="space-y-2.5 pt-2 text-xs text-slate-200">
+              {proFeatures.map((f, i) => (
+                <li key={i} className="flex items-start gap-2.5">
+                  <Check className="w-4 h-4 text-[#10b981] shrink-0 mt-0.5" />
+                  <span>{f}</span>
+                </li>
+              ))}
+              <li className="flex items-start gap-2.5 text-emerald-300 font-semibold pt-1">
+                <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <span>Save $29.89 compared to paying monthly for 1 year</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Payment CTA Area */}
+          <div className="pt-4 border-t border-slate-700/80 space-y-3">
+            {isPro ? (
+              <div className="p-4 rounded-2xl bg-emerald-950/60 border border-[#10b981] text-center space-y-2">
+                <span className="text-xs font-bold text-[#10b981]">PRO MEMBERSHIP ACTIVE</span>
+                <p className="text-[11px] text-slate-300">
+                  You have full unlimited access to all features.
+                </p>
+                <button
+                  onClick={() => onNavigate('dashboard')}
+                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98 cursor-pointer"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span>Accéder à mon Dashboard</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleOpenAnnualCheckout}
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-[#10b981] hover:brightness-110 text-slate-950 font-display font-black text-sm flex items-center justify-center gap-2 transition-all shadow-xl shadow-emerald-500/25 active:scale-98 cursor-pointer"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Prendre le Pass Annuel ($29.99/an)</span>
+              </button>
+            )}
+            <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Garantie satisfait ou remboursé 48h active</span>
+            </div>
+          </div>
         </div>
-        <p className="text-[11px] sm:text-xs text-slate-400 text-center px-4 leading-relaxed">
-          *Applies to first payment only, within 48 hours of subscription. Subsequent payments are non-refundable.
-        </p>
       </div>
+
+      {/* Feature Comparison Table */}
+      <div className="max-w-4xl mx-auto rounded-2xl sm:rounded-3xl bg-[#1a1a2e] border border-slate-700/80 p-5 sm:p-8 shadow-xl space-y-6">
+        <h3 className="font-display font-bold text-lg sm:text-xl text-white text-center">
+          Compare Free vs. Pro Membership
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs sm:text-sm text-left">
+            <thead>
+              <tr className="border-b border-slate-700 text-slate-400">
+                <th className="pb-3 font-semibold">Feature</th>
+                <th className="pb-3 font-semibold text-center w-28 sm:w-32">Free</th>
+                <th className="pb-3 font-semibold text-center w-32 sm:w-40 text-emerald-400">Pro</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800 text-slate-300">
+              <tr>
+                <td className="py-3 font-medium text-white">Daily AI Identifications</td>
+                <td className="py-3 text-center text-slate-400">3 per day</td>
+                <td className="py-3 text-center font-bold text-emerald-400">Unlimited</td>
+              </tr>
+              <tr>
+                <td className="py-3 font-medium text-white">Species Database Access</td>
+                <td className="py-3 text-center text-slate-400">Top 50 Common</td>
+                <td className="py-3 text-center font-bold text-emerald-400">Full 1,000+ Guide</td>
+              </tr>
+              <tr>
+                <td className="py-3 font-medium text-white">Field Journal & GPS Logs</td>
+                <td className="py-3 text-center text-slate-400">Basic (5 entries)</td>
+                <td className="py-3 text-center font-bold text-emerald-400">Unlimited + GPS Export</td>
+              </tr>
+              <tr>
+                <td className="py-3 font-medium text-white">Audio Identifier (Beta)</td>
+                <td className="py-3 text-center text-slate-400">—</td>
+                <td className="py-3 text-center font-bold text-emerald-400">Included</td>
+              </tr>
+              <tr>
+                <td className="py-3 font-medium text-white">PDF Field Guide Export</td>
+                <td className="py-3 text-center text-slate-400">—</td>
+                <td className="py-3 text-center font-bold text-emerald-400">Included</td>
+              </tr>
+              <tr>
+                <td className="py-3 font-medium text-white">Priority AI Processing</td>
+                <td className="py-3 text-center text-slate-400">—</td>
+                <td className="py-3 text-center font-bold text-emerald-400">Fast-Lane Queues</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* FAQ Section */}
+      <div className="max-w-3xl mx-auto space-y-4">
+        <h3 className="font-display font-bold text-xl sm:text-2xl text-white text-center mb-6">
+          Frequently Asked Questions
+        </h3>
+
+        {[
+          {
+            q: 'How does the 48-hour money-back guarantee work?',
+            a: 'If you are not 100% satisfied with The Insect Guide Pro, you can request a full refund within 48 hours of your initial subscription payment directly from your Account Settings. The refund is executed automatically via PayPal without hassle.',
+          },
+          {
+            q: 'Can I cancel my subscription at any time?',
+            a: 'Yes, absolutely. You can cancel with a single click in your Account Settings. Your Pro access will remain active until the end of your prepaid billing period with no further charges.',
+          },
+          {
+            q: 'What payment methods do you accept?',
+            a: 'We accept PayPal balance and all major credit cards (Visa, Mastercard, American Express) processed securely through PayPal encrypted checkout.',
+          },
+          {
+            q: 'Is there any commitment on the Monthly plan?',
+            a: 'None at all. The Monthly plan ($4.99/mo) is billed month-to-month and can be stopped at any moment.',
+          },
+        ].map((faq, i) => (
+          <div
+            key={i}
+            className="rounded-2xl bg-[#1a1a2e] border border-slate-700/80 overflow-hidden transition-all"
+          >
+            <button
+              onClick={() => setActiveFaq(activeFaq === i ? null : i)}
+              className="w-full p-4 sm:p-5 text-left font-display font-bold text-sm sm:text-base text-white flex items-center justify-between gap-4 cursor-pointer hover:text-emerald-300 transition-colors"
+            >
+              <span>{faq.q}</span>
+              <HelpCircle className="w-4 h-4 text-slate-400 shrink-0" />
+            </button>
+            {activeFaq === i && (
+              <div className="px-4 sm:px-5 pb-4 sm:pb-5 text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-slate-800 pt-3">
+                {faq.a}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Modals for Dedicated Isolated Checkouts */}
+      <MonthlyCheckoutModal
+        isOpen={isMonthlyModalOpen}
+        onClose={() => setIsMonthlyModalOpen(false)}
+        onSuccessNavigate={onNavigate}
+      />
+
+      <AnnualCheckoutModal
+        isOpen={isAnnualModalOpen}
+        onClose={() => setIsAnnualModalOpen(false)}
+        onSuccessNavigate={onNavigate}
+      />
     </div>
   );
 };

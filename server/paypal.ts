@@ -256,6 +256,15 @@ export async function handleVerifyPayPalSubscription(req: AuthRequest, res: Resp
       });
     }
 
+    // STRICT SECURITY AUDIT: Verify that the subscription is tied strictly to the authorized Monthly Pro Plan P-1VK52313VC6878320NKDSNEY ($4.99/mo)
+    const canonicalPlanId = PAYPAL_MONTHLY_PLAN_ID_DEFAULT; // 'P-1VK52313VC6878320NKDSNEY'
+    if (subData.plan_id !== canonicalPlanId) {
+      console.error(`[PayPal Security Enforcement] Rejected unauthorized plan ID ${subData.plan_id} for subscription ${subscriptionID}. Authorized canonical plan is ${canonicalPlanId}`);
+      return res.status(403).json({
+        error: 'Subscription rejected: Unauthorized billing plan. Only the canonical The Insect Guide Pro Monthly Plan ($4.99/mo) is accepted.',
+      });
+    }
+
     // 2. Fetch Subscription Transactions to get real Capture ID of the 1st payment
     let captureId = orderID || subscriptionID;
     try {
